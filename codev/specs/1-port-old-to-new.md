@@ -1,6 +1,6 @@
 # Spec 1: Port Old App Features to New Next.js App
 
-**Status**: Draft  
+**Status**: Reviewed (awaiting user approval)  
 **Date**: 2026-04-08
 
 ---
@@ -39,6 +39,8 @@ The goal is to bring the `new/` app to feature parity with the `old/` app — wi
 2. Add `price?: number` to `Booking`
 3. Add `workDone?: string` to `Booking`
 4. Add `invoiceItems?: { description: string; amount: number }[]` to `Booking`
+5. Add `notes?: string` to `Booking` — customer-facing field on the booking form (matching old app), not admin-only
+6. Add `updateBooking(id: string, updates: Partial<Booking>): void` to `storageService` — needed for the "Complete" flow that saves price/workDone/invoiceItems. The existing `updateBookingStatus` only handles `status` + `mechanic`; a generic `updateBooking` avoids overloading that function.
 
 **Constants (`src/lib/constants.ts`)** — new file:
 - Business info constants
@@ -47,8 +49,12 @@ The goal is to bring the `new/` app to feature parity with the `old/` app — wi
 - Mechanics list
 
 **Translations (`src/components/language-provider.tsx`)**:
-- Add keys for all 9 service names (Swahili + English)
-- Add keys for FAQ section title, contact section, WhatsApp CTA
+- Port **all** `UI_STRINGS` from `old/constants.tsx` — both `sw` and `en` objects (~80+ keys each). The current gap is larger than just service names; it includes form labels, invoice strings, admin strings, and status labels. Enumerate by porting the full old constant, not piecemeal.
+
+**Bug Fixes (in scope)**:
+1. **Duplicate emergency checkbox** — `new/src/app/page.tsx` has two emergency checkbox elements (rendering twice). Remove the duplicate.
+2. **Language flash** — `language-provider.tsx` returns `null` while not mounted, causing a brief blank page. Replace with a skeleton/fallback approach using the default language strings.
+3. **Invalid AI model name** — `src/app/actions.ts` uses `gemini-3-flash-preview` which is not a valid model name. Update to `gemini-2.0-flash`.
 
 ### Out of Scope
 - Authentication beyond the simple password check (`admin123`)
@@ -104,9 +110,11 @@ Use the existing `jsPDF` library (already in `package.json`). Port the styled in
 5. Admin mechanics assignment uses a dropdown of 5 predefined names
 6. Admin "Complete" flow captures price, work done, and optional line items
 7. Invoice PDF renders with: header (business name/location), bill-to, vehicle details, line items table, total in TZS
-8. All new Booking fields (whatsapp, price, workDone, invoiceItems) persist to localStorage
-9. Language toggle works for all new sections (services, FAQ, contact, form labels)
-10. No TypeScript errors, no console errors in dev mode
+8. All new Booking fields (whatsapp, price, workDone, invoiceItems, notes) persist to localStorage
+9. Invoice PDF handles bookings with no `invoiceItems` gracefully (backwards compat — shows single service line)
+10. Language toggle works for all new sections (services, FAQ, contact, form labels)
+11. No TypeScript errors — `next build` completes successfully
+12. Both pages render without console errors in dev mode
 
 ---
 
@@ -121,17 +129,29 @@ Use the existing `jsPDF` library (already in `package.json`). Port the styled in
 
 ---
 
-## Open Questions
+## Resolved Questions
 
-| Priority | Question | Impact |
-|---|---|---|
-| Important | Should service descriptions be shown on the landing page (expandable cards)? Old app had full descriptions in a services section. | Affects landing page layout complexity |
-| Important | Should the WhatsApp number for the booking confirmation "Send WhatsApp" button be configurable (env var) or hardcoded? | Currently hardcoded as `255700000000` |
-| Nice-to-know | Should we add the testimonials/trust section from the old app? (not clearly visible in old App.tsx) | Additional UI section |
+| Question | Decision |
+|---|---|
+| Should service descriptions be shown on the landing page? | **Yes** — show full bilingual descriptions in expandable/detailed service cards, matching the old app's Services section. This is core content, not optional. |
+| WhatsApp number — env var or constant? | **Constant** (`WHATSAPP_NUMBER` in `src/lib/constants.ts`). Env var is out of scope for a straight port. |
+| Testimonials section? | **Out of scope** — not a verified feature of the old app UI. |
 
 ---
 
 ## Consultation Log
 
-*(To be updated after multi-agent review)*
+### First Consultation — 2026-04-08
+
+**Gemini**: Could not run — `gemini` CLI not installed in environment.
+
+**Claude (claude-sonnet-4-6 via consult CLI)**: COMMENT / HIGH confidence
+
+Key issues raised:
+1. `updateBookingStatus()` needs a design decision: extend or add `updateBooking()` generic method → **Resolved**: added `updateBooking(id, updates)` to data model scope
+2. Translation key gap is ~40+ keys larger than spec suggested → **Resolved**: changed requirement to "port all `UI_STRINGS` from old constants.tsx"
+3. Open Question #2 (WhatsApp constant vs env var) left unresolved in draft → **Resolved**: decided to use constant
+4. No mention of `invoiceItems`-undefined backwards compat → **Resolved**: added explicit success criterion
+5. `notes` field UX unclear (customer vs admin) → **Resolved**: confirmed customer-facing
+6. No build gate in success criteria → **Resolved**: added `next build` success criterion
 
