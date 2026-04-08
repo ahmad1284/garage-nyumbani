@@ -1,0 +1,7 @@
+{
+  "name": "Garage Nyumbani - Premium Mobile Auto Care",
+  "description": "Zanzibar's leading mobile car garage and breakdown service. Professional home repairs, emergency roadside assistance, and expert vehicle maintenance delivered to your doorstep.",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}

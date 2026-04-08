@@ -1,0 +1,117 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Outfit:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Outfit", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+  --font-graphic: "Outfit", sans-serif;
+  
+  --color-primary: #0066cc;
+  --color-primary-dark: #004499;
+  --color-primary-light: #f0f7ff;
+  --color-secondary: #f8f9fa;
+  --color-accent: #ff3b30;
+  --color-ink: #000000;
+  --color-paper: #ffffff;
+  --color-line: #eeeeee;
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    font-size: 15px; /* Reduced base size */
+  }
+  
+  :root {
+    --bg-main: #ffffff;
+    --text-main: #000000;
+  }
+
+  body {
+    background-color: var(--bg-main);
+    color: var(--text-main);
+    @apply antialiased font-sans overflow-x-hidden;
+  }
+
+  .bg-black {
+    background-color: #000000 !important;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-display tracking-tight;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply bg-black hover:bg-gray-800 text-white font-bold py-3 px-8 rounded-xl transition-all duration-500 shadow-xl shadow-black/10 active:scale-95 flex items-center justify-center gap-2 uppercase tracking-widest text-[10px];
+  }
+  
+  .btn-outline {
+    @apply border border-ink/10 text-ink hover:bg-ink hover:text-white font-bold py-3 px-8 rounded-xl transition-all duration-500 active:scale-95 flex items-center justify-center gap-2 uppercase tracking-widest text-[10px];
+  }
+
+  .card {
+    @apply bg-white rounded-3xl shadow-sm border border-line hover:shadow-xl hover:border-primary/10 transition-all duration-500;
+  }
+
+  .section-padding {
+    @apply py-16 md:py-24 px-6;
+  }
+
+  .container-custom {
+    @apply max-w-7xl mx-auto;
+  }
+
+  .data-value {
+    @apply font-mono tracking-tighter;
+  }
+
+  .micro-label {
+    @apply text-[10px] font-black uppercase tracking-[0.4em] text-gray-400;
+  }
+
+  .motion-text-reveal {
+    @apply overflow-hidden inline-block;
+  }
+
+  @keyframes emergency-pulse {
+    0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.7); }
+    70% { transform: scale(1.05); box-shadow: 0 0 0 15px rgba(220, 38, 38, 0); }
+    100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(220, 38, 38, 0); }
+  }
+
+  .animate-emergency {
+    animation: emergency-pulse 2s infinite;
+  }
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #1a1a1a;
+  border: 2px solid white;
+  border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #333333;
+}
+
+/* Glassmorphism */
+.glass {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.glass-dark {
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
