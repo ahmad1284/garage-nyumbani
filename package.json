@@ -1,0 +1,9 @@
+{
+  "name": "garage-nyumbani",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "build": "cd new && node node_modules/next/dist/bin/next build",
+    "test": "cd new && npm test -- --passWithNoTests"
+  }
+}
