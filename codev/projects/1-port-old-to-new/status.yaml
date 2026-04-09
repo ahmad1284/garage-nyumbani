@@ -1,0 +1,19 @@
+id: '1'
+title: port-old-to-new
+protocol: spir
+phase: plan
+plan_phases: []
+current_plan_phase: null
+gates:
+  spec-approval:
+    status: approved
+    approved_at: '2026-04-09T04:59:51.978Z'
+  plan-approval:
+    status: pending
+  pr:
+    status: pending
+iteration: 1
+build_complete: false
+history: []
+started_at: '2026-04-09T04:58:05.809Z'
+updated_at: '2026-04-09T05:03:13.081Z'
