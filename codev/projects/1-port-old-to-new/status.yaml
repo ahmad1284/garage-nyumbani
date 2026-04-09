@@ -1,7 +1,7 @@
 id: '1'
 title: port-old-to-new
 protocol: spir
-phase: review
+phase: complete
 plan_phases:
   - id: foundation
     title: Foundation — constants, storage, translations
@@ -24,9 +24,11 @@ gates:
     status: approved
     approved_at: '2026-04-09T09:06:03.329Z'
   pr:
-    status: pending
+    status: approved
+    requested_at: '2026-04-09T14:19:57.670Z'
+    approved_at: '2026-04-09T14:44:16.618Z'
 iteration: 1
-build_complete: false
+build_complete: true
 history: []
 started_at: '2026-04-09T04:58:05.809Z'
-updated_at: '2026-04-09T11:41:30.718Z'
+updated_at: '2026-04-09T14:44:45.746Z'
