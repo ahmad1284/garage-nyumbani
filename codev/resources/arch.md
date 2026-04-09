@@ -25,7 +25,7 @@ garage-nyumbani/
 │       │   └── invoice-document.tsx   # PDF invoice React component
 │       └── lib/
 │           ├── constants.ts  # SERVICES, MECHANICS, FAQ_ITEMS, business info
-│           └── storage.ts    # localStorage CRUD (garage_bookings key)
+│           └── storage.ts    # localStorage CRUD (garage_nyumbani_bookings key)
 └── codev/                    # Codev methodology files
 ```
 
@@ -57,7 +57,7 @@ garage-nyumbani/
 
 **Location**: `new/src/lib/storage.ts`
 
-**Purpose**: All persistence via localStorage (`garage_bookings` key). No backend database.
+**Purpose**: All persistence via localStorage (`garage_nyumbani_bookings` key). No backend database.
 
 ### i18n
 
