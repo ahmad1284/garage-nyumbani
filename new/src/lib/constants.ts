@@ -4,11 +4,11 @@ export const WHATSAPP_NUMBER = "255700000000";
 export const BUSINESS_LOCATION = "MPENDAE, ZANZIBAR";
 
 export const MECHANICS: string[] = [
-  "Ali Hassan",
-  "Omar Juma",
-  "Khalid Mwinyimvua",
-  "Saidi Kombo",
-  "Rashid Hamad",
+  "Juma Bakari",
+  "Said Hamad",
+  "Ali Khamis",
+  "Mwinyi Hassan",
+  "Suleiman Rashid",
 ];
 
 export interface ServiceItem {

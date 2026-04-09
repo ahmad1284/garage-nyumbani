@@ -47,7 +47,7 @@ garage-nyumbani/
 - **PDF generation**: InvoiceDocument rendered off-screen at `left: -9999px` → html2canvas capture → jsPDF.addImage
 - **Accordion expand/collapse**: AnimatePresence from `motion/react` wrapping conditional content
 - **SSR-safe i18n**: Default language rendered immediately, `useEffect` switches to localStorage language on mount — no blank flash
-- **Storage**: All bookings in localStorage under `garage_bookings` key
+- **Storage**: All bookings in localStorage under `garage_nyumbani_bookings` key
 
 ### External Dependencies
 | Dependency | Purpose |
