@@ -6,7 +6,7 @@ export async function analyzeCarIssue(description: string): Promise<string> {
   try {
     const ai = new GoogleGenAI({ apiKey: process.env.NEXT_PUBLIC_GEMINI_API_KEY });
     const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
+      model: "gemini-2.0-flash",
       contents: `User says: "${description}". Briefly identify potential car problems (1-2 sentences) and suggest if it is an emergency or a normal service. Respond in Swahili and English.`,
       config: {
         maxOutputTokens: 150,
