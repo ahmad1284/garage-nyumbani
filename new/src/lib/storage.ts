@@ -13,6 +13,11 @@ export interface Booking {
   status: BookingStatus;
   createdAt: string;
   mechanic?: string;
+  whatsapp?: string;
+  price?: number;
+  workDone?: string;
+  invoiceItems?: { description: string; amount: number }[];
+  notes?: string;
 }
 
 export interface WhatsAppLog {
@@ -89,6 +94,12 @@ export const storageService = {
     if (typeof window === 'undefined') return [];
     const data = localStorage.getItem(STORAGE_KEYS.RECORDS);
     return data ? JSON.parse(data) : [];
+  },
+
+  updateBooking: (id: string, updates: Partial<Booking>): void => {
+    const bookings = storageService.getBookings();
+    const updated = bookings.map(b => b.id === id ? { ...b, ...updates } : b);
+    localStorage.setItem(STORAGE_KEYS.BOOKINGS, JSON.stringify(updated));
   },
 
   saveServiceRecord: (record: Omit<ServiceRecord, 'id'>): ServiceRecord => {
