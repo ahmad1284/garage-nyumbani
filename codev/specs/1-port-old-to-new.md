@@ -1,6 +1,6 @@
 # Spec 1: Port Old App Features to New Next.js App
 
-**Status**: Reviewed (awaiting user approval)  
+**Status**: Reviewed — awaiting user approval  
 **Date**: 2026-04-08
 
 ---
@@ -97,7 +97,7 @@ Extend the `Booking` interface in `src/lib/storage.ts` with optional fields. Bac
 Update service IDs in both the customer page and the constants to match the old app's IDs (e.g., `scheduled-maintenance`, `engine-performance`, etc.) for consistency, but keep the new app's category display style.
 
 ### Architecture Decision: Invoice PDF
-Use the existing `jsPDF` library (already in `package.json`). Port the styled invoice layout from old app's `BookingInvoice` component. No `html2canvas` needed for the core invoice — use jsPDF's native drawing API for a clean portable result.
+Use `html2canvas` + `jsPDF` (both already in `package.json`) to render a React `InvoiceDocument` component to PDF. This matches how the admin page already generates invoices today and avoids rebuilding the entire rich layout in jsPDF's drawing API (which would be significantly more implementation effort). The `InvoiceDocument` is a hidden off-screen React component rendered to DOM, then captured by `html2canvas` and embedded into jsPDF.
 
 ---
 
@@ -112,6 +112,7 @@ Use the existing `jsPDF` library (already in `package.json`). Port the styled in
 7. Invoice PDF renders with: header (business name/location), bill-to, vehicle details, line items table, total in TZS
 8. All new Booking fields (whatsapp, price, workDone, invoiceItems, notes) persist to localStorage
 9. Invoice PDF handles bookings with no `invoiceItems` gracefully (backwards compat — shows single service line)
+10. Admin "Complete" flow handles `price: 0` gracefully (valid for `other-specialist` service — zero-price bookings are allowed)
 10. Language toggle works for all new sections (services, FAQ, contact, form labels)
 11. No TypeScript errors — `next build` completes successfully
 12. Both pages render without console errors in dev mode
@@ -141,9 +142,9 @@ Use the existing `jsPDF` library (already in `package.json`). Port the styled in
 
 ## Consultation Log
 
-### First Consultation — 2026-04-08
+### First Consultation — 2026-04-08/09
 
-**Gemini**: Could not run — `gemini` CLI not installed in environment.
+**Gemini (CLI)**: Could not run — `gemini` CLI binary not installed in environment.
 
 **Claude (claude-sonnet-4-6 via consult CLI)**: COMMENT / HIGH confidence
 
@@ -154,4 +155,12 @@ Key issues raised:
 4. No mention of `invoiceItems`-undefined backwards compat → **Resolved**: added explicit success criterion
 5. `notes` field UX unclear (customer vs admin) → **Resolved**: confirmed customer-facing
 6. No build gate in success criteria → **Resolved**: added `next build` success criterion
+
+**Gemini (zen MCP, gemini-2.5-flash)**: COMMENT
+
+Key issues raised:
+1. Invoice PDF: native jsPDF drawing API significantly underestimates effort vs html2canvas approach → **Resolved**: switched to html2canvas + jsPDF (matching existing admin page pattern)
+2. `other-specialist` service has `price: 0` — admin complete flow must handle zero-price gracefully → **Resolved**: added explicit success criterion #10
+3. Porting all `UI_STRINGS` may include unused strings — acceptable dead code risk for a direct port, noted
+4. Backwards compat: old bookings missing new optional fields must not crash new UI → covered by success criterion #9 + all new fields are `?:` optional
 
