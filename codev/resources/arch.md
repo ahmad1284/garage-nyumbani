@@ -4,52 +4,100 @@ High-level architecture documentation for this project. Updated during MAINTAIN 
 
 ## Overview
 
-<!-- Brief description of the project and its purpose -->
+Garage Nyumbani is a mobile auto service platform for Zanzibar. Customers book mechanics online; admins manage bookings, assign mechanics, and generate PDF invoices. The app is bilingual (Swahili + English). Deployed on Netlify.
 
 ## Directory Structure
 
 ```
-project-root/
-├── codev/           # Development methodology
-│   ├── specs/       # Feature specifications
-│   ├── plans/       # Implementation plans
-│   └── reviews/     # Post-implementation reviews
-└── [your code]      # Project source code
+garage-nyumbani/
+├── netlify.toml              # Netlify deployment (base=new/)
+├── package.json              # Root proxy: build/test → new/
+├── new/                      # Next.js 15 app (source of truth)
+│   ├── next.config.ts        # No standalone output (Netlify plugin)
+│   ├── jest.config.ts        # Jest + ts-jest + jsdom
+│   └── src/
+│       ├── app/
+│       │   ├── page.tsx      # Customer landing page
+│       │   ├── admin/page.tsx # Admin dashboard
+│       │   └── actions.ts    # Server action: Gemini AI analysis
+│       ├── components/
+│       │   ├── language-provider.tsx  # EN/SW i18n context
+│       │   └── invoice-document.tsx   # PDF invoice React component
+│       └── lib/
+│           ├── constants.ts  # SERVICES, MECHANICS, FAQ_ITEMS, business info
+│           └── storage.ts    # localStorage CRUD (garage_bookings key)
+└── codev/                    # Codev methodology files
 ```
 
 ## Key Components
 
-<!-- Document major modules, services, or subsystems -->
+### Customer Landing Page
 
-### Component 1
+**Location**: `new/src/app/page.tsx`
 
-**Location**: `src/...`
-
-**Purpose**: ...
+**Purpose**: Public-facing booking form + service catalog + FAQ
 
 **Key Files**:
-- `file1.ts` - ...
-- `file2.ts` - ...
+- `constants.ts` — SERVICES (9 items), FAQ_ITEMS (4 bilingual Q&A)
+- `language-provider.tsx` — EN/SW string lookups via `useLanguage()`
+- `storage.ts` — `saveBooking()` writes to localStorage
+
+### Admin Dashboard
+
+**Location**: `new/src/app/admin/page.tsx`
+
+**Purpose**: Password-protected admin view: manage bookings, assign mechanics, mark complete, generate PDF invoices
+
+**Key Files**:
+- `constants.ts` — MECHANICS list (dropdown source)
+- `storage.ts` — `updateBookingStatus()`, `updateBooking()`
+- `invoice-document.tsx` — off-screen component captured by html2canvas → jsPDF
+
+### Storage Layer
+
+**Location**: `new/src/lib/storage.ts`
+
+**Purpose**: All persistence via localStorage (`garage_bookings` key). No backend database.
+
+### i18n
+
+**Location**: `new/src/components/language-provider.tsx`
+
+**Purpose**: EN/SW context. SSR-safe: renders default language immediately, switches to localStorage preference on mount.
 
 ## Data Flow
 
-<!-- How data moves through the system -->
+```
+Customer fills form → saveBooking() → localStorage
+Admin loads dashboard → getBookings() → display
+Admin marks complete → updateBooking() → localStorage
+Admin clicks invoice → html2canvas(InvoiceDocument) → jsPDF → download
+Booking form submit → analyzeCarIssue() [server action] → Gemini API → AI response shown
+```
 
 ## External Dependencies
 
-<!-- Third-party services, APIs, databases -->
-
-| Dependency | Purpose | Documentation |
-|------------|---------|---------------|
-| Example | ... | [docs](url) |
+| Dependency | Purpose |
+|------------|---------|
+| `@google/genai` | Gemini AI car issue analysis (server action) |
+| `html2canvas` | Capture InvoiceDocument div as canvas |
+| `jspdf` | Embed canvas image into downloadable PDF |
+| `motion/react` | AnimatePresence for accordion animations |
+| `@netlify/plugin-nextjs` | Next.js SSR on Netlify |
+| `sonner` | Toast notifications |
+| `date-fns` | Date formatting in invoice |
 
 ## Configuration
 
-<!-- Environment variables, config files -->
+- `NEXT_PUBLIC_GEMINI_API_KEY` — Gemini API key (set in Netlify env vars)
+- Admin password hardcoded as `admin123` in `admin/page.tsx` (dev-only)
 
 ## Conventions
 
-<!-- Coding standards, naming conventions, patterns used -->
+- All business data (services, mechanics, FAQs, constants) lives in `src/lib/constants.ts`
+- Bilingual strings use `{ en: string, sw: string }` shape in constants; UI picks based on `language` from context
+- PDF generation: render `<InvoiceDocument>` in a hidden div (`left: -9999px`), capture with html2canvas, embed in jsPDF
+- Tests mock jsPDF and html2canvas at module level to avoid jsdom crashes
 
 ---
 

@@ -1,26 +1,33 @@
 # Lessons Learned
 
-> Extracted from `codev/reviews/`. Last updated: YYYY-MM-DD
+> Extracted from `codev/reviews/`. Last updated: 2026-04-09
 
 ## Testing
 
-<!-- Lessons about testing patterns, test isolation, mocking, etc. -->
+- **Mock jsPDF and html2canvas in jsdom tests**: These libraries crash in jsdom (`TextEncoder not defined`). Always mock them at the module level in any test file that imports components which use them.
+- **Wrap components in providers**: Components using `useLanguage()` need `<LanguageProvider>` wrapper. Create a `renderWithProviders` helper in test files that need it.
+- **`getAllByText` when text appears multiple times**: Content like prices or labels may appear on multiple elements. Use `getAllByText` and check `length > 0` rather than `getByText`.
 
 ## Architecture
 
-<!-- Lessons about system design, state management, file organization -->
+- **Remove `output: standalone` for Netlify**: Next.js standalone mode conflicts with `@netlify/plugin-nextjs`. The plugin handles SSR routing; don't use both together.
+- **Root package.json proxy for subdirectory apps**: When build tooling runs from repo root but the app lives in a subdirectory, a root `package.json` that proxies `build` and `test` scripts to the subdirectory avoids path issues with CI and protocol tools.
+- **SSR-safe i18n without flash**: Render default language immediately (no `if (!mounted) return null`), then hydrate to localStorage preference in `useEffect`. This prevents blank renders during SSR.
+- **PDF generation pattern**: Render the invoice as a React component in a hidden div (`position: absolute; left: -9999px`), capture with html2canvas, embed in jsPDF. Wait ~100ms after setting state before capturing to let React render.
 
 ## Process
 
-<!-- Lessons about protocol execution, consultation, PR workflow -->
+- **Create GitHub issue before starting spec**: SPIR workflow expects issue → spec → plan → implement → PR. Create the issue first so the spec can reference it and porch can track it.
+- **Defer impl-phase consultation to PR stage**: `consult --type impl` requires a live PR. If the PR doesn't exist yet, skip impl consultation and consolidate all consultation at the PR review stage.
+- **porch check section headings are exact**: Review documents must contain `## Architecture Updates` and `## Lessons Learned Updates` exactly as written for porch to pass its checks.
 
 ## Tooling
 
-<!-- Lessons about CLI tools, dependencies, build systems -->
+- **Valid Gemini model names**: `gemini-2.0-flash` works; `gemini-3-flash-preview` does not exist. Check the Gemini docs for current model IDs before hardcoding.
 
 ## Integration
 
-<!-- Lessons about external APIs, third-party services, auth -->
+- **Gemini `thinkingConfig.thinkingBudget`**: Can be set to a low value (e.g. 50) for fast, short responses. Combine with `maxOutputTokens: 150` for brief AI responses in booking flows.
 
 ---
 
