@@ -1,0 +1,101 @@
+Good, all 40 tests pass. Let me check a few more things — the indentation issue in next.config.ts and the spec's mechanic names vs implementation.Now I have enough context for a thorough review. Let me compile my findings.
+
+---
+
+## PR Review: feat: Port old app features to new Next.js app
+
+### 1. Completeness — Spec Alignment
+
+**Mostly complete, with one spec deviation:**
+
+- ✅ 9 services with bilingual titles, descriptions, prices
+- ✅ Booking form with WhatsApp + notes fields
+- ✅ FAQ section (4 bilingual items)
+- ✅ Contact section with phone, WhatsApp CTA, location
+- ✅ Mechanics dropdown (5 names, no free-text)
+- ✅ Completion modal with price/workDone/invoiceItems
+- ✅ InvoiceDocument component with html2canvas → jsPDF
+- ✅ `updateBooking()` in storage
+- ✅ SSR-safe language provider (no blank flash)
+- ✅ Duplicate emergency checkbox removed
+- ✅ Gemini model fixed to `gemini-2.0-flash`
+- ✅ Review document at `codev/reviews/1-port-old-to-new.md`
+
+**⚠️ Mechanic names differ from spec.** The spec explicitly lists: *JUMA BAKARI, SAID HAMAD, ALI KHAMIS, MWINYI HASSAN, SULEIMAN RASHID*. The implementation uses: *Ali Hassan, Omar Juma, Khalid Mwinyimvua, Saidi Kombo, Rashid Hamad*. These are completely different names. This may be intentional (updated names), but it's a spec deviation that should be acknowledged.
+
+### 2. Code Quality
+
+**Indentation issue in `next.config.ts` line 28:**
+```diff
+-  output: 'standalone',
+-  transpilePackages: ['motion'],
++transpilePackages: ['motion'],
+```
+The `transpilePackages` line lost its 2-space indentation when `output: 'standalone'` was removed. Cosmetic but sloppy.
+
+**Admin page is large (~700+ lines)** — acceptable for this scope, but worth noting for future refactoring.
+
+**Good patterns observed:**
+- Clean separation of constants, storage, components
+- Completion modal properly validates price (accepts 0, rejects NaN/negative)
+- Invoice gracefully falls back when `invoiceItems` is undefined
+- No debug code, no TODOs, no console.logs in source
+
+### 3. Test Coverage
+
+40 tests across 5 files — solid coverage:
+- `constants.test.ts` (9) — data integrity
+- `storage.test.ts` (5) — CRUD + updateBooking + edge cases
+- `language-provider.test.tsx` (5) — SSR-safe, language switching
+- `page.test.tsx` (12) — service catalog, form, FAQ, contact
+- `admin.test.tsx` (9) — login, mechanics dropdown, completion modal, price:0
+
+Tests all pass ✅. Good edge case coverage (price:0, backwards compat, single emergency checkbox assertion).
+
+### 4. Documentation
+
+- Review document is comprehensive with architecture updates and lessons learned
+- `arch.md` and `lessons-learned.md` properly updated
+- **Minor doc inaccuracy**: Review doc and arch.md reference `garage_bookings` as the localStorage key, but the actual code uses `garage_nyumbani_bookings`. Should be corrected for accuracy.
+
+### 5. Security Notes
+
+- `NEXT_PUBLIC_GEMINI_API_KEY` is used in a `"use server"` action — the `NEXT_PUBLIC_` prefix exposes the key to client bundles. Should be `GEMINI_API_KEY`. **However**, this is pre-existing (not introduced by this PR), so not blocking.
+- Admin password `admin123` is hardcoded — acknowledged as dev-only in arch.md.
+
+### 6. Minor Observations
+
+- `any` type removed from `history` state — good cleanup (`Booking[]` now).
+- Root `package.json` proxy pattern is clean and works for CI.
+- `.gitattributes` for `package-lock.json` is a nice touch.
+
+---
+
+VERDICT: COMMENT
+SUMMARY: Solid port with good test coverage; mechanic names deviate from spec and minor cosmetic/doc issues should be noted but aren't blocking
+CONFIDENCE: HIGH
+---
+
+KEY_ISSUES:
+- Mechanic names in constants.ts don't match spec (Ali Hassan/Omar Juma/etc. vs JUMA BAKARI/SAID HAMAD/etc.) — confirm if intentional
+- `transpilePackages` line in next.config.ts lost indentation (cosmetic)
+- Doc inaccuracy: review/arch docs say `garage_bookings` key but code uses `garage_nyumbani_bookings`
+
+PR_SUMMARY: |
+  ## Summary
+  Ports all features from the old Garage Nyumbani React app to the new Next.js 15 app router project. Builds bilingual (EN/SW) customer landing page with service catalog, booking form, FAQ, and contact section. Adds admin dashboard features: mechanics dropdown, booking completion modal with price/work-done/line-items, and PDF invoice generation via html2canvas + jsPDF.
+
+  ## Key Changes
+  - `src/lib/constants.ts` — New file: SERVICES (9), MECHANICS (5), FAQ_ITEMS (4 bilingual), business info
+  - `src/lib/storage.ts` — Extended Booking type with whatsapp/price/workDone/invoiceItems/notes + `updateBooking()`
+  - `src/components/language-provider.tsx` — SSR-safe EN/SW i18n, no hydration flash
+  - `src/components/invoice-document.tsx` — React component for styled PDF invoice
+  - `src/app/page.tsx` — Rich service catalog, booking form with WhatsApp/notes, FAQ, contact section
+  - `src/app/admin/page.tsx` — Mechanics dropdown, completion modal, InvoiceDocument PDF generation
+  - `netlify.toml` + root `package.json` — Netlify deployment config and build proxy
+
+  ## Test Plan
+  - [x] 40 unit tests passing (`npm test`)
+  - [x] Build clean (`npm run build`)
+  - [ ] Verify mechanic names match business requirements
+  - [ ] Manual test of PDF invoice generation in browser

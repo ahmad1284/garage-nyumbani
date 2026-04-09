@@ -1,0 +1,11 @@
+CONSULTATION SKIPPED — prompt exceeded model token limit due to package-lock.json in PR diff.
+Root cause: new/package-lock.json (~11k lines) inflates the PR diff beyond what models can process.
+Fix applied: .gitattributes added to exclude package-lock.json from diffs going forward.
+Action: Re-run consultation after .gitattributes is merged and PR diff is regenerated.
+
+---
+VERDICT: COMMENT
+SUMMARY: Consultation skipped — PR diff too large (package-lock.json). Re-run after .gitattributes fix.
+CONFIDENCE: LOW
+---
+KEY_ISSUES: None (code review skipped, not a code quality issue)

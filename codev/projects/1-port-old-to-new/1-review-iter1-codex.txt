@@ -1,0 +1,10 @@
+CONSULTATION SKIPPED — 401 Unauthorized (OpenAI API key not configured) + prompt too large.
+Root cause: (1) OPENAI_API_KEY env var missing/invalid; (2) package-lock.json in PR diff inflates prompt.
+Fix: Configure OPENAI_API_KEY and re-run after .gitattributes fix reduces diff size.
+
+---
+VERDICT: COMMENT
+SUMMARY: Consultation skipped — missing API key + PR diff too large. Re-run after fixes.
+CONFIDENCE: LOW
+---
+KEY_ISSUES: None (code review skipped, not a code quality issue)
