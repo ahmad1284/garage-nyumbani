@@ -8,12 +8,14 @@
 
 ## phases_json
 ```json
-[
-  "foundation",
-  "customer-landing",
-  "admin-dashboard",
-  "bug-fixes-and-polish"
-]
+{
+  "phases": [
+    { "id": "foundation", "title": "Foundation — constants, storage, translations" },
+    { "id": "customer-landing", "title": "Customer Landing Page" },
+    { "id": "admin-dashboard", "title": "Admin Dashboard" },
+    { "id": "bug-fixes-and-polish", "title": "Bug Fixes and Polish" }
+  ]
+}
 ```
 
 ---
@@ -164,4 +166,10 @@ Phases 1, 2, 3 (runs last as final verification)
 
 ## Consultation Log
 
-*(To be updated after multi-agent review)*
+### First Consultation — 2026-04-09
+
+**Gemini (zen MCP, gemini-2.5-flash)**: APPROVE / HIGH confidence  
+Phase ordering logical, deliverables specific. Only suggestion: Phase 3 is largest — InvoiceDocument could be sub-tasked if velocity is an issue, but not required to split.
+
+**Claude (architect self-review)**: APPROVE / HIGH confidence  
+All spec requirements mapped to phases. Foundation-first ordering correct. InvoiceDocument abstraction is right call.

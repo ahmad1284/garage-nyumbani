@@ -1,19 +1,32 @@
 id: '1'
 title: port-old-to-new
 protocol: spir
-phase: plan
-plan_phases: []
-current_plan_phase: null
+phase: implement
+plan_phases:
+  - id: foundation
+    title: Foundation — constants, storage, translations
+    status: in_progress
+  - id: customer-landing
+    title: Customer Landing Page
+    status: pending
+  - id: admin-dashboard
+    title: Admin Dashboard
+    status: pending
+  - id: bug-fixes-and-polish
+    title: Bug Fixes and Polish
+    status: pending
+current_plan_phase: foundation
 gates:
   spec-approval:
     status: approved
     approved_at: '2026-04-09T04:59:51.978Z'
   plan-approval:
-    status: pending
+    status: approved
+    approved_at: '2026-04-09T09:06:03.329Z'
   pr:
     status: pending
 iteration: 1
 build_complete: false
 history: []
 started_at: '2026-04-09T04:58:05.809Z'
-updated_at: '2026-04-09T05:03:13.081Z'
+updated_at: '2026-04-09T09:06:10.284Z'
