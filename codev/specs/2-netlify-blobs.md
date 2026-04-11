@@ -64,7 +64,8 @@ page.tsx (client)          admin/page.tsx (client)
                   │
                   ▼
      Next.js API Routes           ◄── src/app/api/
-     /api/auth            (public — validates ADMIN_PASSWORD env var)
+     /api/auth            (public — validates ADMIN_PASSWORD, returns session token)
+     /api/logout          (admin-only — deletes session token from Blobs)
      /api/bookings        (POST: public, GET: public)
      /api/bookings/[id]   (PATCH: admin-only)
      /api/logs            (GET: public, POST: admin-only)
@@ -139,10 +140,13 @@ The admin password moves from a hardcoded client-side string (`'admin123'`) to a
 1. Admin submits password on the login page
 2. Client POSTs to `/api/auth` with `{ password }`
 3. API route compares against `process.env.ADMIN_PASSWORD`
-4. On match: returns `{ token: process.env.ADMIN_PASSWORD }` — the password itself is used as the bearer token. Simple and sufficient at this scale. The password is already in the `Authorization` header on every admin request, which is visible in browser DevTools — this is an accepted trade-off for a single-admin garage app.
+4. On match: generates a `crypto.randomUUID()` session token, stores it in Netlify Blobs under key `admin-session:<uuid>` with value `{ createdAt }`, returns `{ token: uuid }` to the client
 5. Client stores token in `sessionStorage`
-6. All admin write/read requests include `Authorization: Bearer <token>` header
-7. API route middleware verifies the token before processing
+6. All admin write requests include `Authorization: Bearer <token>` header
+7. API route middleware looks up the token in Blobs, checks it exists and is not expired (TTL: 8 hours)
+8. `/api/logout` deletes the session token from Blobs, clearing the session
+
+**Why not password-as-token**: The raw `ADMIN_PASSWORD` as a bearer token would be visible in browser DevTools on every request, and would be replayable indefinitely if captured. Session tokens are short-lived and revocable.
 
 **Protected endpoints** (require auth token):
 - `PATCH /api/bookings/[id]` — admin-only status updates
@@ -154,9 +158,15 @@ The admin password moves from a hardcoded client-side string (`'admin123'`) to a
 - `GET /api/bookings?phone=` — customers look up their own history
 - `GET /api/records`, `GET /api/logs` — read-only (acceptable for now; can restrict later)
 
+**New API routes for auth:**
+- `POST /api/auth` — validate password, return session token. Response: `200 { token }` or `401`
+- `POST /api/logout` — delete session token from Blobs. Requires `Authorization: Bearer <token>`
+
 **Environment variable**: Set `ADMIN_PASSWORD` via Netlify dashboard → Site settings → Environment variables. For local dev, add to `.env.local` (gitignored).
 
-**Token check helper**: A shared `verifyAdminToken(request: Request): boolean` utility used by all protected routes.
+**Session store**: Sessions stored in the same `garage-nyumbani` Blobs store under keys prefixed `admin-session:`. TTL checked at verification time (no automatic expiry in Blobs — compare `createdAt + 8h` against `Date.now()`).
+
+**Token check helper**: A shared `verifyAdminToken(request: Request): Promise<boolean>` utility used by all protected routes.
 
 ## Updated `storageService`
 
@@ -216,8 +226,10 @@ npm install -D netlify-cli
 3. Admin dashboard loads bookings from the server (not localStorage)
 4. Bookings survive a browser clear / incognito window
 5. Updating a booking status from admin is reflected on customer history lookup
-6. Admin login uses `ADMIN_PASSWORD` env var — wrong password returns `401`, correct password returns a token
-7. Unauthenticated PATCH/POST to admin endpoints returns `401`
+6. Admin login uses `ADMIN_PASSWORD` env var — wrong password returns `401`, correct password returns a UUID session token
+7. Session token stored in Netlify Blobs, expires after 8 hours
+8. Unauthenticated PATCH/POST to admin endpoints returns `401`
+9. Logout deletes session token from Blobs; subsequent requests with that token return `401`
 8. All existing unit tests pass (updated for async signatures where needed)
 9. New API route unit tests exist for all endpoints including `/api/auth`
 10. Playwright MCP verification: submit booking → check it appears in admin dashboard (cross-tab persistence)
@@ -235,6 +247,11 @@ npm install -D netlify-cli
 | `ADMIN_PASSWORD` not set in local dev | Document: add to `.env.local`; API routes return `503` with clear error if var is missing |
 
 ## Consultation Log
+
+**Gemini 2.5 Flash (Spec review, Round 3, via zen MCP)** — `REQUEST_CHANGES` with HIGH confidence
+
+Key issue raised and addressed:
+- Using raw `ADMIN_PASSWORD` as bearer token exposes the secret in browser DevTools and allows indefinite replay attacks → redesigned to UUID session tokens stored in Blobs with 8h TTL + explicit `/api/logout` endpoint
 
 **Claude (Spec review, Round 2)** — `COMMENT` with HIGH confidence (no blockers)
 
@@ -267,12 +284,14 @@ Key issues raised and addressed:
 ## Security
 
 Admin authentication is **in scope** for this spec:
-- `ADMIN_PASSWORD` stored as a Netlify environment variable, never in source code
-- All admin write endpoints protected by token verification (see Admin Authentication section)
+- `ADMIN_PASSWORD` stored as a Netlify environment variable, never in source code or network traffic
+- Login generates a UUID session token stored in Blobs (TTL 8h) — the password itself is never sent to the client
+- All admin write endpoints protected by session token verification
 - Customer-submitted bookings remain public (no auth needed to book a service)
 - `.env.local` is gitignored; `ADMIN_PASSWORD` set via Netlify dashboard for production
+- Logout endpoint deletes the session token, enabling proper session revocation
 
 Accepted limitations for now:
-- Public GET endpoints expose booking data to anyone with the URL — acceptable for this garage's scale and non-sensitive nature of service records
+- Public GET endpoints expose booking data to anyone with the URL — acceptable for this garage's scale
 - No rate limiting on public endpoints
-- Session token is `sessionStorage`-based (cleared on tab close)
+- Session token is `sessionStorage`-based (cleared on tab close); server-side token also expires after 8h
