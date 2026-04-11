@@ -91,29 +91,45 @@ All three data sets are stored as JSON arrays under single keys in one site-scop
 ## API Routes
 
 ### `GET /api/bookings`
-Returns all bookings. Optional `?phone=` query param to filter by phone.
+Returns all bookings as JSON array.  
+Optional `?phone=` query param to filter by phone (server-side filter).  
+Response: `200 Booking[]`
 
 ### `POST /api/bookings`
-Body: `Omit<Booking, 'id' | 'status' | 'createdAt'>`. Creates booking, returns the new `Booking`.
+Body: `Omit<Booking, 'id' | 'status' | 'createdAt'>`. Creates booking with server-generated ID (`crypto.randomUUID()` preferred over `Math.random()`), status `'New'`, and `createdAt` timestamp.  
+Response: `201 Booking`  
+Error: `400` on invalid body, `500` on Blobs failure
 
 ### `PATCH /api/bookings/[id]`
-Body: `Partial<Booking>`. Updates fields on a booking. Returns updated `Booking`.
+Body: `Partial<Booking>`. Handles both `updateBookingStatus` and `updateBooking` use cases — any subset of Booking fields can be updated.  
+Pattern: read-modify-write (GET array → update matching entry → SET array). Last-write-wins if concurrent.  
+Response: `200 Booking` (updated)  
+Error: `404` if booking ID not found, `500` on failure
 
 ### `GET /api/logs`
-Returns all WhatsApp logs.
+Returns all logs.  
+Response: `200 WhatsAppLog[]`
 
 ### `POST /api/logs`
-Body: `{ bookingId, phone, message }`. Appends a log entry.
+Body: `{ bookingId: string, phone: string, message: string }`. Appends a log entry.  
+Fire-and-forget from client, but API route must return a response.  
+Response: `201 WhatsAppLog`  
+Error: `500` on failure (surfaced to client as toast)
 
 ### `GET /api/records`
-Returns all service records.
+Returns all service records.  
+Response: `200 ServiceRecord[]`
 
 ### `POST /api/records`
-Body: `Omit<ServiceRecord, 'id'>`. Creates a service record.
+Body: `Omit<ServiceRecord, 'id'>`. Creates a service record.  
+Response: `201 ServiceRecord`  
+Error: `400` on invalid body, `500` on failure
+
+**Empty store**: When a Blobs key doesn't exist yet (first deploy), treat `null` result as `[]`. All GET handlers must implement this fallback.
 
 ## Updated `storageService`
 
-The public method signatures stay identical. Internals change from `localStorage` to `fetch`:
+Method **names** stay identical. Signatures change from sync to async:
 
 ```typescript
 // Before
@@ -125,16 +141,19 @@ getBookings(): Promise<Booking[]>          // async
 saveBooking(...): Promise<Booking>         // async
 ```
 
-**Breaking change**: All methods become async. Components currently call them synchronously. UI code will need `await` / `useEffect` / loading state updates.
+**Error handling pattern**: On network/server errors, `storageService` methods should throw (not silently return empty arrays). Callers handle errors via `try/catch` and show toasts. This applies to all methods including `addLog`.
+
+All methods become async — UI code needs `await` + loading states where appropriate. The admin dashboard must add an `isLoading` state for the initial data load (bookings, records, logs are now network-bound).
 
 ## Component Impact
 
-| File | Change |
-|---|---|
-| `src/app/page.tsx` | `handleBook`, `handleSearch` → await storageService calls |
-| `src/app/admin/page.tsx` | `useEffect` loads, `handleStatusUpdate`, `handleComplete`, `handleSaveRecord` → await |
+| File | Location | Change |
+|---|---|---|
+| `src/app/page.tsx` | `handleBook`, `handleSearch` | `await storageService` calls; add loading state |
+| `src/app/admin/page.tsx` | `useEffect` loads, `handleStatusUpdate`, `handleComplete`, `handleSaveRecord` | `await storageService` calls |
+| `src/app/admin/page.tsx` | L380, L396 — inline JSX render | **Breaking**: `storageService.getLogs()` is called synchronously in JSX render. Must be moved to `useEffect` with `logs` state, like `bookings` and `records` are already managed. |
 
-Both files already use `async` event handlers in most places. The change is additive.
+The `handleBook`/`handleSearch` handlers are already `async`. The inline `getLogs()` in JSX render is the most significant change — it requires adding a `logs` state variable and a `useEffect` to load it.
 
 ## Local Development
 
@@ -152,13 +171,11 @@ No `@netlify/vite-plugin` needed — this is Next.js.
 
 ```bash
 npm install @netlify/blobs
-```
-
-No other new runtime dependencies. Dev dependency: `netlify-cli` is already in devDependencies as `firebase-tools`... actually it needs to be added:
-
-```bash
 npm install -D netlify-cli
 ```
+
+`@netlify/blobs` — runtime dependency for server-side blob storage.  
+`netlify-cli` — dev dependency for local development via `netlify dev`.
 
 ## Success Criteria
 
@@ -167,8 +184,12 @@ npm install -D netlify-cli
 3. Admin dashboard loads bookings from the server (not localStorage)
 4. Bookings survive a browser clear / incognito window
 5. Updating a booking status from admin is reflected on customer history lookup
-6. All existing unit tests pass (or are updated for async signatures)
+6. All existing unit tests pass (updated for async signatures where needed)
 7. No `localStorage` calls remain in production code
+8. New API route unit tests exist for all 7 endpoints (GET/POST bookings, PATCH booking by id, GET/POST logs, GET/POST records)
+9. Playwright smoke test: submit booking → check it appears in admin dashboard (cross-tab persistence)
+
+**Testing tools available**: Jest (unit), Playwright (e2e), zen MCP (AI-assisted review)
 
 ## Risk & Mitigations
 
@@ -181,12 +202,25 @@ npm install -D netlify-cli
 
 ## Consultation Log
 
-*(To be filled after consultations)*
+**Claude (Spec review, Round 1)** — `REQUEST_CHANGES` with HIGH confidence
+
+Key issues raised and addressed:
+- Inline `getLogs()` calls in JSX render at admin/page.tsx L380/L396 are a breaking async change — flagged in Component Impact table
+- No error handling strategy → added: storageService throws, callers use try/catch + toast
+- No HTTP status codes → added to all API route definitions
+- No test requirements beyond "existing tests pass" → added 8 unit tests + 1 Playwright smoke test
+- Open questions unresolved → resolved all three (isLoading: yes, addLog errors: surface them, netlify dev in README: yes)
+- Confusing firebase-tools sentence → removed
+- "Signatures stay identical" contradiction → corrected to "method names stay identical"
 
 ---
 
-## Open Questions
+## Resolved Questions
 
-1. Should we add a simple `isLoading` state to the admin dashboard, or is optimistic UI sufficient?
-2. Should `addLog` remain fire-and-forget or surface errors to the UI?
-3. Do we need `netlify dev` documented in the README, or is it obvious from netlify.toml?
+1. **`isLoading` state**: Yes — add to admin dashboard. Bookings, records, and logs are now network-bound. Show a loading spinner or skeleton on initial load.
+2. **`addLog` error handling**: Surface errors. `storageService` throws on failure; callers catch and show a toast.
+3. **`netlify dev` in README**: Yes — update README with local dev instructions for Netlify Blobs.
+
+## Security Note (Future Work)
+
+All API routes are currently unprotected — anyone who discovers them can read customer PII (names, phone numbers). A follow-up spec (Spec 3 or separate) should add a server-side API key check or move admin auth to middleware. This is accepted risk for now.
