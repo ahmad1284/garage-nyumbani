@@ -25,13 +25,13 @@ Replace all `localStorage` reads/writes with **Netlify Blobs** (server-side key-
 ### In Scope
 - Replace `storageService` internals to call Next.js API routes instead of localStorage
 - Create API routes (`/api/bookings`, `/api/logs`, `/api/records`) backed by Netlify Blobs
+- **Admin API authentication**: protect write/admin endpoints with a server-side password check via `ADMIN_PASSWORD` Netlify environment variable
 - Install and configure `@netlify/blobs`
 - Update `netlify.toml` for local dev with `netlify dev`
 - Maintain existing TypeScript types (`Booking`, `WhatsAppLog`, `ServiceRecord`) unchanged
 - Keep the same `storageService` public API shape (method names and signatures) to minimize UI changes
 
 ### Out of Scope
-- Authentication/authorization on API routes (admin password stays client-side for now)
 - Migration/import of existing localStorage data
 - Real-time updates (no WebSockets/polling)
 - TanStack Query integration (Spec 3)
@@ -54,19 +54,21 @@ page.tsx (client)          admin/page.tsx (client)
 
 ```
 page.tsx (client)          admin/page.tsx (client)
-       │                          │
-       └──────────┬───────────────┘
+       │                     │  Auth: Bearer token in sessionStorage
+       │                     │  Login: POST /api/auth → token
+       └──────────┬───────────┘
                   ▼
           storageService          ◄── src/lib/storage.ts (updated: fetch-based)
                   │
-              fetch()
+              fetch()  [+ Authorization header for admin calls]
                   │
                   ▼
      Next.js API Routes           ◄── src/app/api/
-     /api/bookings
-     /api/bookings/[id]
-     /api/logs
-     /api/records
+     /api/auth            (public — validates ADMIN_PASSWORD env var)
+     /api/bookings        (POST: public, GET: public)
+     /api/bookings/[id]   (PATCH: admin-only)
+     /api/logs            (GET: public, POST: admin-only)
+     /api/records         (GET: public, POST: admin-only)
                   │
                   ▼
           Netlify Blobs            ◄── @netlify/blobs (server-side)
@@ -94,6 +96,8 @@ All three data sets are stored as JSON arrays under single keys in one site-scop
 Returns all bookings as JSON array.  
 Optional `?phone=` query param to filter by phone (server-side filter).  
 Response: `200 Booking[]`
+
+**Client-side exposure**: `storageService.getBookings()` gains an optional `phone?: string` parameter. When provided, it passes `?phone=<value>` to the API route. This replaces the existing client-side filter in `handleSearch`.
 
 ### `POST /api/bookings`
 Body: `Omit<Booking, 'id' | 'status' | 'createdAt'>`. Creates booking with server-generated ID (`crypto.randomUUID()` preferred over `Math.random()`), status `'New'`, and `createdAt` timestamp.  
@@ -127,6 +131,33 @@ Error: `400` on invalid body, `500` on failure
 
 **Empty store**: When a Blobs key doesn't exist yet (first deploy), treat `null` result as `[]`. All GET handlers must implement this fallback.
 
+## Admin Authentication
+
+The admin password moves from a hardcoded client-side string (`'admin123'`) to a server-side environment variable.
+
+**Flow:**
+1. Admin submits password on the login page
+2. Client POSTs to `/api/auth` with `{ password }`
+3. API route compares against `process.env.ADMIN_PASSWORD`
+4. On match: returns `{ token: process.env.ADMIN_PASSWORD }` — the password itself is used as the bearer token. Simple and sufficient at this scale. The password is already in the `Authorization` header on every admin request, which is visible in browser DevTools — this is an accepted trade-off for a single-admin garage app.
+5. Client stores token in `sessionStorage`
+6. All admin write/read requests include `Authorization: Bearer <token>` header
+7. API route middleware verifies the token before processing
+
+**Protected endpoints** (require auth token):
+- `PATCH /api/bookings/[id]` — admin-only status updates
+- `POST /api/logs` — admin-only log entries
+- `POST /api/records` — admin-only service records
+
+**Public endpoints** (no auth required):
+- `POST /api/bookings` — customers submit bookings
+- `GET /api/bookings?phone=` — customers look up their own history
+- `GET /api/records`, `GET /api/logs` — read-only (acceptable for now; can restrict later)
+
+**Environment variable**: Set `ADMIN_PASSWORD` via Netlify dashboard → Site settings → Environment variables. For local dev, add to `.env.local` (gitignored).
+
+**Token check helper**: A shared `verifyAdminToken(request: Request): boolean` utility used by all protected routes.
+
 ## Updated `storageService`
 
 Method **names** stay identical. Signatures change from sync to async:
@@ -149,11 +180,12 @@ All methods become async — UI code needs `await` + loading states where approp
 
 | File | Location | Change |
 |---|---|---|
-| `src/app/page.tsx` | `handleBook`, `handleSearch` | `await storageService` calls; add loading state |
-| `src/app/admin/page.tsx` | `useEffect` loads, `handleStatusUpdate`, `handleComplete`, `handleSaveRecord` | `await storageService` calls |
-| `src/app/admin/page.tsx` | L380, L396 — inline JSX render | **Breaking**: `storageService.getLogs()` is called synchronously in JSX render. Must be moved to `useEffect` with `logs` state, like `bookings` and `records` are already managed. |
+| `src/app/page.tsx` | `handleBook`, `handleSearch` | Both are sync — must become `async`, add `await storageService` calls + `try/catch` + loading state |
+| `src/app/admin/page.tsx` | `useEffect` loads, `handleStatusUpdate`, `handleComplete` | Add `await` to storageService calls |
+| `src/app/admin/page.tsx` | L658 — inline `onSubmit` on the manual record form | Inline handler calls `storageService.saveServiceRecord()` — must become async and await |
+| `src/app/admin/page.tsx` | L380, L396 — inline JSX render | **Breaking**: `storageService.getLogs()` called synchronously in JSX render. Must be moved to `useEffect` with `logs` state variable. |
 
-The `handleBook`/`handleSearch` handlers are already `async`. The inline `getLogs()` in JSX render is the most significant change — it requires adding a `logs` state variable and a `useEffect` to load it.
+`handleBook` and `handleSearch` in `page.tsx` are **not** async — both need to become `async` and gain `await` + `try/catch`. The inline `getLogs()` in JSX render is the most structurally significant change — it requires adding a `logs` state variable and a `useEffect` to load it.
 
 ## Local Development
 
@@ -184,12 +216,13 @@ npm install -D netlify-cli
 3. Admin dashboard loads bookings from the server (not localStorage)
 4. Bookings survive a browser clear / incognito window
 5. Updating a booking status from admin is reflected on customer history lookup
-6. All existing unit tests pass (updated for async signatures where needed)
-7. No `localStorage` calls remain in production code
-8. New API route unit tests exist for all 7 endpoints (GET/POST bookings, PATCH booking by id, GET/POST logs, GET/POST records)
-9. Playwright smoke test: submit booking → check it appears in admin dashboard (cross-tab persistence)
+6. Admin login uses `ADMIN_PASSWORD` env var — wrong password returns `401`, correct password returns a token
+7. Unauthenticated PATCH/POST to admin endpoints returns `401`
+8. All existing unit tests pass (updated for async signatures where needed)
+9. New API route unit tests exist for all endpoints including `/api/auth`
+10. Playwright MCP verification: submit booking → check it appears in admin dashboard (cross-tab persistence)
 
-**Testing tools available**: Jest (unit), Playwright (e2e), zen MCP (AI-assisted review)
+**Testing tools**: Jest (unit tests), Playwright MCP (browser-based visual verification — used to check the app is working, not as a CLI test runner), zen MCP (AI consultation via Gemini)
 
 ## Risk & Mitigations
 
@@ -198,9 +231,19 @@ npm install -D netlify-cli
 | Last-write-wins on concurrent updates | Acceptable for single-admin, low-traffic garage; document as known limitation |
 | `netlify dev` required for local Blobs | Add to README / devcontainer setup |
 | SSR hydration mismatch (async storage) | UI components already handle empty states; add `isLoading` where needed |
-| Admin password hardcoded in client | Out of scope; existing behavior preserved |
+| Admin password hardcoded in client | **Mitigated**: moved to `ADMIN_PASSWORD` env var, verified server-side |
+| `ADMIN_PASSWORD` not set in local dev | Document: add to `.env.local`; API routes return `503` with clear error if var is missing |
 
 ## Consultation Log
+
+**Claude (Spec review, Round 2)** — `COMMENT` with HIGH confidence (no blockers)
+
+Key issues raised and addressed:
+- `handleBook`/`handleSearch` are sync, not async — corrected in Component Impact table
+- Phone filter client-side exposure undefined → added optional `phone?` param to `getBookings()`
+- Auth token design ambiguous → resolved: use `ADMIN_PASSWORD` as bearer token directly
+- `.env.local` and `.netlify/` not in `.gitignore` → added both
+- `handleSaveRecord` doesn't exist — it's an inline `onSubmit` at L658 → corrected
 
 **Claude (Spec review, Round 1)** — `REQUEST_CHANGES` with HIGH confidence
 
@@ -221,6 +264,15 @@ Key issues raised and addressed:
 2. **`addLog` error handling**: Surface errors. `storageService` throws on failure; callers catch and show a toast.
 3. **`netlify dev` in README**: Yes — update README with local dev instructions for Netlify Blobs.
 
-## Security Note (Future Work)
+## Security
 
-All API routes are currently unprotected — anyone who discovers them can read customer PII (names, phone numbers). A follow-up spec (Spec 3 or separate) should add a server-side API key check or move admin auth to middleware. This is accepted risk for now.
+Admin authentication is **in scope** for this spec:
+- `ADMIN_PASSWORD` stored as a Netlify environment variable, never in source code
+- All admin write endpoints protected by token verification (see Admin Authentication section)
+- Customer-submitted bookings remain public (no auth needed to book a service)
+- `.env.local` is gitignored; `ADMIN_PASSWORD` set via Netlify dashboard for production
+
+Accepted limitations for now:
+- Public GET endpoints expose booking data to anyone with the URL — acceptable for this garage's scale and non-sensitive nature of service records
+- No rate limiting on public endpoints
+- Session token is `sessionStorage`-based (cleared on tab close)

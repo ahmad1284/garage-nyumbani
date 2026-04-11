@@ -1,3 +1,10 @@
+# Netlify
+.netlify/
+
+# Local env
+.env.local
+.env*.local
+
 # Codev
 .agent-farm/
 .consult/
