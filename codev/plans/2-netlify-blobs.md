@@ -237,6 +237,8 @@ saveServiceRecord(record: Omit<ServiceRecord,'id'>): Promise<ServiceRecord>
 
 ## Consultation Log
 
+**Gemini 2.5 Flash (Plan review, Round 2, via zen MCP)** — `APPROVE` with HIGH confidence. No key issues.
+
 **Claude (Plan review, Round 1)** — `COMMENT` with HIGH confidence (no blockers)
 
 Issues raised and addressed:
