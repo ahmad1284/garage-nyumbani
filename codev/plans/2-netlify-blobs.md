@@ -57,7 +57,6 @@
    ```
    ADMIN_PASSWORD=your-dev-password
    ```
-   Document in README: required for `netlify dev`.
 
 6. **Update `netlify.toml`** — add `[dev]` section to set the target port:
    ```toml
@@ -66,10 +65,21 @@
    targetPort = 3000
    ```
 
+7. **Update `README.md`** — add a "Local Development" section documenting:
+   - Requires `netlify-cli` installed
+   - Copy `.env.local.example` → `.env.local`, set `ADMIN_PASSWORD`
+   - Run `netlify dev` instead of `npm run dev` when working with Blobs
+
+8. **Remove `firebase-tools`** from devDependencies — it's unused and large:
+   ```bash
+   npm uninstall firebase-tools
+   ```
+
 ### Success Criteria
 - `npm run build` passes (no TypeScript errors)
 - `netlify dev` starts and Next.js is accessible
 - `getGarageStore()` and `verifyAdminToken()` are importable without runtime errors
+- README has local dev instructions
 
 ---
 
@@ -82,7 +92,7 @@
 
 **`src/app/api/auth/route.ts`**
 - `POST` — reads `{ password }` from body, compares to `process.env.ADMIN_PASSWORD`
-  - Match: calls `createAdminSession()`, returns `201 { token }`
+  - Match: calls `createAdminSession()`, returns `200 { token }`
   - No match: `401 { error: "Invalid password" }`
   - `ADMIN_PASSWORD` not set: `503 { error: "Auth not configured" }`
 
@@ -227,4 +237,9 @@ saveServiceRecord(record: Omit<ServiceRecord,'id'>): Promise<ServiceRecord>
 
 ## Consultation Log
 
-*(To be filled after plan consultations)*
+**Claude (Plan review, Round 1)** — `COMMENT` with HIGH confidence (no blockers)
+
+Issues raised and addressed:
+- README local dev update not assigned to a phase → added to Phase 1 as explicit deliverable
+- `POST /api/auth` response code mismatch (plan had 201, spec had 200) → aligned to `200`
+- `firebase-tools` removal not mentioned → added to Phase 1

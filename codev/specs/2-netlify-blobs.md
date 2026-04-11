@@ -159,7 +159,7 @@ The admin password moves from a hardcoded client-side string (`'admin123'`) to a
 - `GET /api/records`, `GET /api/logs` — read-only (acceptable for now; can restrict later)
 
 **New API routes for auth:**
-- `POST /api/auth` — validate password, return session token. Response: `200 { token }` or `401`
+- `POST /api/auth` — validate password, return session token. Response: `200 { token }` or `401`. (`200` not `201` — this is an auth action, not resource creation)
 - `POST /api/logout` — delete session token from Blobs. Requires `Authorization: Bearer <token>`
 
 **Environment variable**: Set `ADMIN_PASSWORD` via Netlify dashboard → Site settings → Environment variables. For local dev, add to `.env.local` (gitignored).
