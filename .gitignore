@@ -1,3 +1,10 @@
+# Netlify
+.netlify/
+
+# Local env
+.env.local
+.env*.local
+
 # Codev
 .agent-farm/
 .consult/
@@ -9,6 +16,8 @@ node_modules/
 
 # Build output
 dist/
+.next/
+tsconfig.tsbuildinfo
 
 # Credentials
 creds.txt
