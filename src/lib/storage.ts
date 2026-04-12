@@ -39,76 +39,108 @@ export interface ServiceRecord {
   notes: string;
 }
 
-const STORAGE_KEYS = {
-  BOOKINGS: 'garage_nyumbani_bookings',
-  LOGS: 'garage_nyumbani_logs',
-  RECORDS: 'garage_nyumbani_records',
-};
+// Admin session token — persisted in sessionStorage across page reloads
+let _adminToken: string | null = null;
+
+export function setAdminToken(token: string | null): void {
+  _adminToken = token;
+  if (typeof window !== 'undefined') {
+    if (token) {
+      sessionStorage.setItem('admin_token', token);
+    } else {
+      sessionStorage.removeItem('admin_token');
+    }
+  }
+}
+
+export function getAdminToken(): string | null {
+  if (_adminToken) return _adminToken;
+  if (typeof window !== 'undefined') {
+    _adminToken = sessionStorage.getItem('admin_token');
+  }
+  return _adminToken;
+}
+
+function authHeaders(): HeadersInit {
+  const token = getAdminToken();
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
+async function throwIfNotOk(res: Response): Promise<void> {
+  if (!res.ok) {
+    let msg = `HTTP ${res.status}`;
+    try {
+      const body = await res.json();
+      if (body?.error) msg = body.error;
+    } catch { /* ignore */ }
+    throw new Error(msg);
+  }
+}
 
 export const storageService = {
-  getBookings: (): Booking[] => {
-    if (typeof window === 'undefined') return [];
-    const data = localStorage.getItem(STORAGE_KEYS.BOOKINGS);
-    return data ? JSON.parse(data) : [];
-  },
-  
-  saveBooking: (booking: Omit<Booking, 'id' | 'status' | 'createdAt'>): Booking => {
-    const bookings = storageService.getBookings();
-    const newBooking: Booking = {
-      ...booking,
-      id: Math.random().toString(36).substr(2, 9),
-      status: 'New',
-      createdAt: new Date().toISOString(),
-    };
-    localStorage.setItem(STORAGE_KEYS.BOOKINGS, JSON.stringify([newBooking, ...bookings]));
-    return newBooking;
+  async getBookings(phone?: string): Promise<Booking[]> {
+    const url = phone ? `/api/bookings?phone=${encodeURIComponent(phone)}` : '/api/bookings';
+    const res = await fetch(url);
+    await throwIfNotOk(res);
+    return res.json();
   },
 
-  updateBookingStatus: (id: string, status: BookingStatus, mechanic?: string) => {
-    const bookings = storageService.getBookings();
-    const updated = bookings.map(b => 
-      b.id === id ? { ...b, status, ...(mechanic ? { mechanic } : {}) } : b
-    );
-    localStorage.setItem(STORAGE_KEYS.BOOKINGS, JSON.stringify(updated));
+  async saveBooking(booking: Omit<Booking, 'id' | 'status' | 'createdAt'>): Promise<Booking> {
+    const res = await fetch('/api/bookings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(booking),
+    });
+    await throwIfNotOk(res);
+    return res.json();
   },
 
-  getLogs: (): WhatsAppLog[] => {
-    if (typeof window === 'undefined') return [];
-    const data = localStorage.getItem(STORAGE_KEYS.LOGS);
-    return data ? JSON.parse(data) : [];
+  async updateBookingStatus(id: string, status: BookingStatus, mechanic?: string): Promise<void> {
+    const res = await fetch(`/api/bookings/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', ...authHeaders() },
+      body: JSON.stringify({ status, ...(mechanic ? { mechanic } : {}) }),
+    });
+    await throwIfNotOk(res);
   },
 
-  addLog: (bookingId: string, phone: string, message: string) => {
-    const logs = storageService.getLogs();
-    const newLog: WhatsAppLog = {
-      id: Math.random().toString(36).substr(2, 9),
-      bookingId,
-      phone,
-      message,
-      sentAt: new Date().toISOString(),
-    };
-    localStorage.setItem(STORAGE_KEYS.LOGS, JSON.stringify([newLog, ...logs]));
+  async updateBooking(id: string, updates: Partial<Booking>): Promise<void> {
+    const res = await fetch(`/api/bookings/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', ...authHeaders() },
+      body: JSON.stringify(updates),
+    });
+    await throwIfNotOk(res);
   },
 
-  getServiceRecords: (): ServiceRecord[] => {
-    if (typeof window === 'undefined') return [];
-    const data = localStorage.getItem(STORAGE_KEYS.RECORDS);
-    return data ? JSON.parse(data) : [];
+  async getLogs(): Promise<WhatsAppLog[]> {
+    const res = await fetch('/api/logs');
+    await throwIfNotOk(res);
+    return res.json();
   },
 
-  updateBooking: (id: string, updates: Partial<Booking>): void => {
-    const bookings = storageService.getBookings();
-    const updated = bookings.map(b => b.id === id ? { ...b, ...updates } : b);
-    localStorage.setItem(STORAGE_KEYS.BOOKINGS, JSON.stringify(updated));
+  async addLog(bookingId: string, phone: string, message: string): Promise<void> {
+    const res = await fetch('/api/logs', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...authHeaders() },
+      body: JSON.stringify({ bookingId, phone, message }),
+    });
+    await throwIfNotOk(res);
   },
 
-  saveServiceRecord: (record: Omit<ServiceRecord, 'id'>): ServiceRecord => {
-    const records = storageService.getServiceRecords();
-    const newRecord: ServiceRecord = {
-      ...record,
-      id: Math.random().toString(36).substr(2, 9),
-    };
-    localStorage.setItem(STORAGE_KEYS.RECORDS, JSON.stringify([newRecord, ...records]));
-    return newRecord;
-  }
+  async getServiceRecords(): Promise<ServiceRecord[]> {
+    const res = await fetch('/api/records');
+    await throwIfNotOk(res);
+    return res.json();
+  },
+
+  async saveServiceRecord(record: Omit<ServiceRecord, 'id'>): Promise<ServiceRecord> {
+    const res = await fetch('/api/records', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...authHeaders() },
+      body: JSON.stringify(record),
+    });
+    await throwIfNotOk(res);
+    return res.json();
+  },
 };
