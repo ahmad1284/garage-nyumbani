@@ -1,9 +1,10 @@
 # Review 2: Port Storage Layer to Netlify Blobs
 
-**Status**: Complete  
+**Status**: Complete — Merged  
 **Spec**: `codev/specs/2-netlify-blobs.md`  
 **Plan**: `codev/plans/2-netlify-blobs.md`  
-**Branch**: `claude/implement-spec-2-spir-rTJUY`
+**Branch**: `claude/implement-spec-2-spir-rTJUY`  
+**PR**: ahmad1284/garage-nyumbani#6 — approved and merged by human
 
 ---
 
