@@ -100,18 +100,25 @@ User enters phone
     → Return bookings for that phone
 ```
 
-OTP stored as: `otp:{phone}` blob with value `{ code, expiresAt }`. Deleted after use.
+OTP stored as: `otp:{phone}` blob with value `{ code, expiresAt, attempts }`. Deleted after use or after max attempts.
+
+**Security requirements**:
+- **Rate limiting**: `/api/otp/send` accepts max 3 requests per phone per hour (tracked in Netlify Blobs as `otp-ratelimit:{phone}`). Returns 429 if exceeded.
+- **Brute-force protection**: `/api/otp/verify` allows max 5 attempts per OTP before invalidating it.
+- **Phone normalization**: Canonicalize input to `+2557XXXXXXXX` format before storage and lookup. Accept `07XX`, `+2557XX`, `2557XX` variants.
 
 Africa's Talking free tier is available in Tanzania/Zanzibar. Credentials via env vars: `AT_API_KEY`, `AT_USERNAME`.
 
-**Fallback**: If Africa's Talking is not configured, fall back to showing a "demo mode" notice and allow bypass (for local dev).
+> **⚠️ HARD BLOCKER**: OTP (history) and SMS reminders features are **blocked** until `AT_API_KEY` + `AT_USERNAME` are set in Netlify environment variables. Implementation can proceed but these features must not be deployed live without credentials.
+
+**Fallback**: If `AT_API_KEY` is not set, show a "Demo mode" notice and skip OTP gate — only active when `NODE_ENV !== 'production'`.
 
 ### Footer Component
 
 ```
 src/components/footer.tsx
 ```
-- Google Maps embed: `<iframe>` pointing to Mpendae, Zanzibar coordinates
+- Google Maps embed: `<iframe>` pointing to Mpendae, Zanzibar coordinates — lazy-loaded (`loading="lazy"`) to avoid blocking page load on slow mobile connections
 - WhatsApp link: `https://wa.me/WHATSAPP_NUMBER`
 - Social: Facebook, Instagram (placeholder hrefs from constants)
 - Address: `BUSINESS_LOCATION` constant
@@ -129,6 +136,8 @@ interface ServiceItem {
 ```
 
 Use `next/image` with `fill` + `object-cover` in card header area (fixed height ~160px). Keep emoji as overlay badge.
+
+**Fallback**: Each service card must define a `fallbackBg` Tailwind gradient class used when the image fails to load. Do not hotlink with no fallback — broken images degrade trust.
 
 ### Marquee
 
@@ -156,8 +165,8 @@ New function `generateServiceHistoryPDF(records: ServiceRecord[])`:
 
 1. Admin clicks "Send Reminders" for nearing-due cars
 2. Modal shows list with pre-composed WhatsApp message per customer
-3. "Send All via WhatsApp" opens each in new tab (deep links) — low friction, no API cost
-4. "Send All via SMS" calls `POST /api/reminders/send` which loops through Africa's Talking SMS API
+3. **WhatsApp flow**: Show customers one at a time — "Send to [Name]" button opens deep link, admin clicks through sequentially. No mass-tab-open. After each, admin marks as sent.
+4. **SMS flow** (requires Africa's Talking): "Send All via SMS" calls `POST /api/reminders/send` which loops through Africa's Talking API. Shows confirmation dialog with count + estimated cost before sending.
 5. Each sent reminder creates a `WhatsAppLog` entry with `type: 'reminder'`
 
 ---
@@ -205,4 +214,18 @@ New function `generateServiceHistoryPDF(records: ServiceRecord[])`:
 
 ## Consultation Log
 
-*(To be populated after multi-agent review)*
+### Round 1 — Claude (Opus)
+
+**Verdict**: REQUEST_CHANGES | Confidence: HIGH
+
+**Key feedback incorporated**:
+- Added OTP rate limiting (3/hr per phone), brute-force cap (5 attempts), phone normalization (E.164)
+- Marked Africa's Talking credentials as hard blocker; demo-mode bypass gated to non-production
+- Revised WhatsApp reminder UX: sequential per-customer flow instead of mass tab-open
+- Added SMS send confirmation dialog with count/cost
+- Added image fallback gradients for service cards
+- Added `loading="lazy"` to Google Maps iframe
+
+**Not acted on**: Claude suggested splitting into 2-3 specs. User confirmed single spec is intentional — all features target one release. Implementation will be phased in the plan.
+
+**Gemini**: Skipped — API key not configured in this environment.
