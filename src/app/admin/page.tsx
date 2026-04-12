@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'motion/react';
 import Link from 'next/link';
-import { storageService, Booking, BookingStatus, ServiceRecord } from '@/lib/storage';
+import { storageService, Booking, BookingStatus, ServiceRecord, WhatsAppLog, setAdminToken, getAdminToken } from '@/lib/storage';
 import { MECHANICS, SERVICES } from '@/lib/constants';
 import { InvoiceDocument } from '@/components/invoice-document';
 import {
@@ -31,6 +31,8 @@ export default function AdminDashboard() {
   const [password, setPassword] = useState('');
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [records, setRecords] = useState<ServiceRecord[]>([]);
+  const [logs, setLogs] = useState<WhatsAppLog[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('dashboard');
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
   const [mechanicName, setMechanicName] = useState('');
@@ -51,53 +53,110 @@ export default function AdminDashboard() {
   const [invoiceBooking, setInvoiceBooking] = useState<Booking | null>(null);
 
   useEffect(() => {
-    if (isAuthenticated) {
-      setBookings(storageService.getBookings());
-      setRecords(storageService.getServiceRecords());
-    }
+    // Restore session from sessionStorage on mount
+    const token = getAdminToken();
+    if (token) setIsAuthenticated(true);
+  }, []);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    setIsLoading(true);
+    Promise.all([
+      storageService.getBookings(),
+      storageService.getServiceRecords(),
+      storageService.getLogs(),
+    ])
+      .then(([b, r, l]) => {
+        setBookings(b);
+        setRecords(r);
+        setLogs(l);
+      })
+      .catch(() => toast.error('Failed to load data'))
+      .finally(() => setIsLoading(false));
   }, [isAuthenticated]);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (password === 'admin123') {
+    try {
+      const res = await fetch('/api/auth', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password }),
+      });
+      if (!res.ok) {
+        toast.error('Invalid password');
+        return;
+      }
+      const { token } = await res.json();
+      setAdminToken(token);
       setIsAuthenticated(true);
       toast.success('Logged in successfully');
-    } else {
-      toast.error('Invalid password');
+    } catch {
+      toast.error('Login failed. Please try again.');
     }
   };
 
-  const handleStatusUpdate = (id: string, status: BookingStatus, mechanic?: string) => {
-    storageService.updateBookingStatus(id, status, mechanic);
-    setBookings(storageService.getBookings());
-    toast.success(`Booking marked as ${status}`);
-    setSelectedBooking(null);
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/logout', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${getAdminToken()}` },
+      });
+    } catch { /* best effort */ }
+    setAdminToken(null);
+    setIsAuthenticated(false);
+    setBookings([]);
+    setRecords([]);
+    setLogs([]);
+  };
 
-    if (status === 'In Progress' || status === 'Completed') {
-      const b = bookings.find(x => x.id === id);
-      if (b) {
-        const msg = status === 'In Progress'
-          ? `Hello ${b.customerName}, your mechanic ${mechanic} has been assigned and is on the way!`
-          : `Hello ${b.customerName}, your service for ${b.carModel} is complete. Thank you for choosing Garage Nyumbani!`;
-        storageService.addLog(id, b.phone, msg);
+  const handleStatusUpdate = async (id: string, status: BookingStatus, mechanic?: string) => {
+    try {
+      await storageService.updateBookingStatus(id, status, mechanic);
+      const updated = await storageService.getBookings();
+      setBookings(updated);
+      toast.success(`Booking marked as ${status}`);
+      setSelectedBooking(null);
 
-        if (status === 'Completed') {
-          storageService.saveServiceRecord({
-            phone: b.phone,
-            customerName: b.customerName,
-            carModel: b.carModel,
-            serviceType: b.serviceType,
-            serviceDate: new Date().toISOString(),
-            nextServiceDate: addDays(new Date(), 90).toISOString(),
-            notes: `Completed booking ${b.id}`
-          });
-          setRecords(storageService.getServiceRecords());
+      if (status === 'In Progress' || status === 'Completed') {
+        const b = updated.find(x => x.id === id) ?? bookings.find(x => x.id === id);
+        if (b) {
+          const msg = status === 'In Progress'
+            ? `Hello ${b.customerName}, your mechanic ${mechanic} has been assigned and is on the way!`
+            : `Hello ${b.customerName}, your service for ${b.carModel} is complete. Thank you for choosing Garage Nyumbani!`;
+          try {
+            await storageService.addLog(id, b.phone, msg);
+            const updatedLogs = await storageService.getLogs();
+            setLogs(updatedLogs);
+          } catch {
+            toast.error('Failed to log WhatsApp message');
+          }
+
+          if (status === 'Completed') {
+            try {
+              await storageService.saveServiceRecord({
+                phone: b.phone,
+                customerName: b.customerName,
+                carModel: b.carModel,
+                serviceType: b.serviceType,
+                serviceDate: new Date().toISOString(),
+                nextServiceDate: addDays(new Date(), 90).toISOString(),
+                notes: `Completed booking ${b.id}`
+              });
+              const updatedRecords = await storageService.getServiceRecords();
+              setRecords(updatedRecords);
+            } catch {
+              toast.error('Failed to save service record');
+            }
+          }
         }
       }
+    } catch {
+      toast.error('Failed to update booking status');
     }
   };
 
-  const handleCompleteBooking = () => {
+  const handleCompleteBooking = async () => {
     if (!selectedBooking) return;
     const price = parseFloat(completionData.price);
     if (isNaN(price) || price < 0) {
@@ -105,14 +164,18 @@ export default function AdminDashboard() {
       return;
     }
     const validItems = completionData.invoiceItems.filter(item => item.description.trim());
-    storageService.updateBooking(selectedBooking.id, {
-      price,
-      workDone: completionData.workDone,
-      invoiceItems: validItems.length > 0 ? validItems : undefined,
-    });
-    handleStatusUpdate(selectedBooking.id, 'Completed', selectedBooking.mechanic);
-    setIsCompletionModalOpen(false);
-    setCompletionData({ price: '', workDone: '', invoiceItems: [{ description: '', amount: 0 }] });
+    try {
+      await storageService.updateBooking(selectedBooking.id, {
+        price,
+        workDone: completionData.workDone,
+        invoiceItems: validItems.length > 0 ? validItems : undefined,
+      });
+      await handleStatusUpdate(selectedBooking.id, 'Completed', selectedBooking.mechanic);
+      setIsCompletionModalOpen(false);
+      setCompletionData({ price: '', workDone: '', invoiceItems: [{ description: '', amount: 0 }] });
+    } catch {
+      toast.error('Failed to complete booking');
+    }
   };
 
   const openCompletionModal = () => {
@@ -135,10 +198,16 @@ export default function AdminDashboard() {
     }));
   };
 
-  const sendReminder = (record: ServiceRecord) => {
+  const sendReminder = async (record: ServiceRecord) => {
     const msg = `Hello ${record.customerName}, it's time for your next ${record.serviceType} service for your ${record.carModel}. Please book an appointment with Garage Nyumbani!`;
-    storageService.addLog('reminder', record.phone, msg);
-    toast.success(`Reminder sent to ${record.customerName}`);
+    try {
+      await storageService.addLog('reminder', record.phone, msg);
+      const updatedLogs = await storageService.getLogs();
+      setLogs(updatedLogs);
+      toast.success(`Reminder sent to ${record.customerName}`);
+    } catch {
+      toast.error('Failed to send reminder');
+    }
   };
 
   const generateInvoice = async (booking: Booking) => {
@@ -255,10 +324,16 @@ export default function AdminDashboard() {
             ))}
           </nav>
         </div>
-        <div className="p-6 mt-auto">
+        <div className="p-6 mt-auto space-y-3">
           <Link href="/" className="flex items-center gap-2 text-sm font-medium text-gray-500 hover:text-black dark:hover:text-white transition-colors">
             <ChevronLeft className="w-4 h-4" /> Back to Site
           </Link>
+          <button
+            onClick={handleLogout}
+            className="flex items-center gap-2 text-sm font-medium text-red-500 hover:text-red-700 transition-colors"
+          >
+            Logout
+          </button>
         </div>
       </aside>
 
@@ -266,7 +341,13 @@ export default function AdminDashboard() {
       <main className="flex-1 p-6 md:p-10 overflow-y-auto">
         <div className="max-w-6xl mx-auto">
 
-          {activeTab === 'dashboard' && (
+          {isLoading && (
+            <div className="flex items-center justify-center py-20">
+              <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
+            </div>
+          )}
+
+          {!isLoading && activeTab === 'dashboard' && (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
               <div className="flex justify-between items-center mb-8">
                 <h2 className="font-display text-3xl font-bold">Overview</h2>
@@ -312,7 +393,7 @@ export default function AdminDashboard() {
             </motion.div>
           )}
 
-          {activeTab === 'bookings' && (
+          {!isLoading && activeTab === 'bookings' && (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
               <h2 className="font-display text-3xl font-bold mb-8">Booking Management</h2>
               <div className="bg-white dark:bg-black rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden">
@@ -372,12 +453,12 @@ export default function AdminDashboard() {
             </motion.div>
           )}
 
-          {activeTab === 'logs' && (
+          {!isLoading && activeTab === 'logs' && (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
               <h2 className="font-display text-3xl font-bold mb-8">Communication Logs</h2>
               <div className="bg-white dark:bg-black rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm p-6">
                 <div className="space-y-6">
-                  {storageService.getLogs().map(log => (
+                  {logs.map(log => (
                     <div key={log.id} className="flex gap-4 p-4 bg-gray-50 dark:bg-zinc-900 rounded-xl">
                       <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-full h-fit">
                         <MessageSquare className="w-5 h-5 text-green-600 dark:text-green-400" />
@@ -393,7 +474,7 @@ export default function AdminDashboard() {
                       </div>
                     </div>
                   ))}
-                  {storageService.getLogs().length === 0 && (
+                  {logs.length === 0 && (
                     <div className="text-center text-gray-500 py-8">No communication logs found.</div>
                   )}
                 </div>
@@ -401,7 +482,7 @@ export default function AdminDashboard() {
             </motion.div>
           )}
 
-          {activeTab === 'reminders' && (
+          {!isLoading && activeTab === 'reminders' && (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
               <div className="flex justify-between items-center mb-8">
                 <h2 className="font-display text-3xl font-bold">Service Reminders</h2>
@@ -655,22 +736,27 @@ export default function AdminDashboard() {
                 <XCircle className="w-5 h-5" />
               </button>
             </div>
-            <form onSubmit={(e) => {
+            <form onSubmit={async (e) => {
               e.preventDefault();
-              storageService.saveServiceRecord({
-                ...manualRecord,
-                serviceDate: new Date(manualRecord.serviceDate).toISOString(),
-                nextServiceDate: new Date(manualRecord.nextServiceDate).toISOString(),
-              });
-              setRecords(storageService.getServiceRecords());
-              setIsManualRecordModalOpen(false);
-              toast.success('Service record added');
-              setManualRecord({
-                customerName: '', phone: '', carModel: '', serviceType: '',
-                serviceDate: format(new Date(), 'yyyy-MM-dd'),
-                nextServiceDate: format(addDays(new Date(), 90), 'yyyy-MM-dd'),
-                notes: ''
-              });
+              try {
+                await storageService.saveServiceRecord({
+                  ...manualRecord,
+                  serviceDate: new Date(manualRecord.serviceDate).toISOString(),
+                  nextServiceDate: new Date(manualRecord.nextServiceDate).toISOString(),
+                });
+                const updatedRecords = await storageService.getServiceRecords();
+                setRecords(updatedRecords);
+                setIsManualRecordModalOpen(false);
+                toast.success('Service record added');
+                setManualRecord({
+                  customerName: '', phone: '', carModel: '', serviceType: '',
+                  serviceDate: format(new Date(), 'yyyy-MM-dd'),
+                  nextServiceDate: format(addDays(new Date(), 90), 'yyyy-MM-dd'),
+                  notes: ''
+                });
+              } catch {
+                toast.error('Failed to save service record');
+              }
             }} className="p-6 space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 {[

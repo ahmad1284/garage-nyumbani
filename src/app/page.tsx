@@ -52,18 +52,22 @@ export default function CustomerLanding() {
     setIsAiThinking(false);
   };
 
-  const handleBook = (e: React.FormEvent) => {
+  const handleBook = async (e: React.FormEvent) => {
     e.preventDefault();
     const { otherDescription, ...bookingData } = formData;
-    const newBooking = storageService.saveBooking(bookingData);
-    setConfirmedBooking(newBooking);
-    toast.success(t.thankYou);
-    setFormData({
-      customerName: '', phone: '', whatsapp: '', carModel: '',
-      serviceType: SERVICES[0].id, otherDescription: '',
-      location: '', preferredDate: '', preferredTime: '', isEmergency: false, notes: '',
-    });
-    setAiResponse(null);
+    try {
+      const newBooking = await storageService.saveBooking(bookingData);
+      setConfirmedBooking(newBooking);
+      toast.success(t.thankYou);
+      setFormData({
+        customerName: '', phone: '', whatsapp: '', carModel: '',
+        serviceType: SERVICES[0].id, otherDescription: '',
+        location: '', preferredDate: '', preferredTime: '', isEmergency: false, notes: '',
+      });
+      setAiResponse(null);
+    } catch {
+      toast.error('Failed to submit booking. Please try again.');
+    }
   };
 
   const generateReceipt = (booking: Booking) => {
@@ -103,12 +107,15 @@ export default function CustomerLanding() {
     window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`, '_blank');
   };
 
-  const handleSearch = (e: React.FormEvent) => {
+  const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
-    const bookings = storageService.getBookings();
-    const userHistory = bookings.filter(b => b.phone === searchPhone);
-    setHistory(userHistory);
-    if (userHistory.length === 0) toast.error(t.noHistory);
+    try {
+      const userHistory = await storageService.getBookings(searchPhone);
+      setHistory(userHistory);
+      if (userHistory.length === 0) toast.error(t.noHistory);
+    } catch {
+      toast.error('Failed to load booking history. Please try again.');
+    }
   };
 
   const selectedService = SERVICES.find(s => s.id === formData.serviceType);
