@@ -8,7 +8,8 @@ import { MECHANICS, SERVICES } from '@/lib/constants';
 import { InvoiceDocument } from '@/components/invoice-document';
 import {
   LayoutDashboard, Users, FileText, MessageSquare, Download,
-  CheckCircle, Clock, XCircle, AlertCircle, Wrench, ChevronLeft, Calendar, Plus, Trash2
+  CheckCircle, Clock, XCircle, AlertCircle, Wrench, ChevronLeft, Calendar, Plus, Trash2,
+  Search, Phone, ChevronDown
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { format, isBefore, addDays } from 'date-fns';
@@ -51,6 +52,10 @@ export default function AdminDashboard() {
   });
   const invoiceRef = useRef<HTMLDivElement>(null);
   const [invoiceBooking, setInvoiceBooking] = useState<Booking | null>(null);
+  const [bookingSearch, setBookingSearch] = useState('');
+  const [recordSearch, setRecordSearch] = useState('');
+  const [logSearch, setLogSearch] = useState('');
+  const [nearingDueExpanded, setNearingDueExpanded] = useState(false);
 
   useEffect(() => {
     // Restore session from sessionStorage on mount
@@ -283,6 +288,38 @@ export default function AdminDashboard() {
     );
   }
 
+  const nearingDue = records.filter(r =>
+    isBefore(new Date(r.nextServiceDate), addDays(new Date(), 14))
+  );
+
+  const filteredBookings = bookingSearch.trim()
+    ? bookings.filter(b => {
+        const q = bookingSearch.toLowerCase();
+        return b.customerName.toLowerCase().includes(q) ||
+               b.phone.includes(q) ||
+               b.carModel.toLowerCase().includes(q) ||
+               b.serviceType.toLowerCase().includes(q) ||
+               b.status.toLowerCase().includes(q);
+      })
+    : bookings;
+
+  const filteredRecords = recordSearch.trim()
+    ? records.filter(r => {
+        const q = recordSearch.toLowerCase();
+        return r.customerName.toLowerCase().includes(q) ||
+               r.phone.includes(q) ||
+               r.carModel.toLowerCase().includes(q) ||
+               r.serviceType.toLowerCase().includes(q);
+      })
+    : records;
+
+  const filteredLogs = logSearch.trim()
+    ? logs.filter(l => {
+        const q = logSearch.toLowerCase();
+        return l.phone.includes(q) || l.message.toLowerCase().includes(q);
+      })
+    : logs;
+
   const stats = {
     total: bookings.length,
     pending: bookings.filter(b => b.status === 'New').length,
@@ -368,6 +405,45 @@ export default function AdminDashboard() {
                   </div>
                 ))}
               </div>
+              {/* Nearing Due Card */}
+              <div className="mb-8 bg-white dark:bg-black rounded-2xl border border-orange-100 dark:border-orange-900/30 shadow-sm overflow-hidden">
+                <button
+                  onClick={() => setNearingDueExpanded(x => !x)}
+                  className="w-full flex items-center justify-between p-5 hover:bg-orange-50 dark:hover:bg-orange-900/10 transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    <Calendar className="w-5 h-5 text-orange-500" />
+                    <span className="font-semibold">Cars Nearing Service Due</span>
+                    <span className="px-2 py-0.5 rounded-full bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 text-xs font-bold">
+                      {nearingDue.length}
+                    </span>
+                  </div>
+                  <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${nearingDueExpanded ? 'rotate-180' : ''}`} />
+                </button>
+                {nearingDueExpanded && (
+                  <div className="border-t border-orange-100 dark:border-orange-900/30 divide-y divide-gray-100 dark:divide-gray-800">
+                    {nearingDue.length === 0 ? (
+                      <div className="p-4 text-center text-gray-500 text-sm">No cars due within 14 days.</div>
+                    ) : nearingDue.map(r => (
+                      <div key={r.id} className="p-4 flex items-center justify-between gap-4">
+                        <div>
+                          <div className="font-medium text-sm">{r.customerName} — {r.carModel}</div>
+                          <div className="text-xs text-gray-500 mt-0.5">
+                            {r.serviceType} · Due: {format(new Date(r.nextServiceDate), 'PP')}
+                          </div>
+                        </div>
+                        <a
+                          href={`tel:${r.phone}`}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 text-xs font-medium hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors"
+                        >
+                          <Phone className="w-3.5 h-3.5" /> {r.phone}
+                        </a>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
               <h3 className="font-display text-xl font-bold mb-6">Recent Emergency Bookings</h3>
               <div className="bg-white dark:bg-black rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden">
                 <div className="divide-y divide-gray-100 dark:divide-gray-800">
@@ -395,7 +471,17 @@ export default function AdminDashboard() {
 
           {!isLoading && activeTab === 'bookings' && (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-              <h2 className="font-display text-3xl font-bold mb-8">Booking Management</h2>
+              <h2 className="font-display text-3xl font-bold mb-6">Booking Management</h2>
+              <div className="relative mb-6">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <input
+                  type="text"
+                  value={bookingSearch}
+                  onChange={e => setBookingSearch(e.target.value)}
+                  placeholder="Search by name, phone, car, service..."
+                  className="w-full pl-11 pr-4 py-3 rounded-xl bg-white dark:bg-black border border-gray-200 dark:border-gray-800 focus:ring-2 focus:ring-blue-500 outline-none text-sm"
+                />
+              </div>
               <div className="bg-white dark:bg-black rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden">
                 <div className="overflow-x-auto">
                   <table className="w-full text-left border-collapse">
@@ -409,7 +495,7 @@ export default function AdminDashboard() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-                      {bookings.map(b => (
+                      {filteredBookings.map(b => (
                         <tr key={b.id} className="hover:bg-gray-50 dark:hover:bg-zinc-900/50 transition-colors">
                           <td className="p-4">
                             <div className="font-mono text-sm">{b.id.toUpperCase()}</div>
@@ -455,10 +541,20 @@ export default function AdminDashboard() {
 
           {!isLoading && activeTab === 'logs' && (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-              <h2 className="font-display text-3xl font-bold mb-8">Communication Logs</h2>
+              <h2 className="font-display text-3xl font-bold mb-6">Communication Logs</h2>
+              <div className="relative mb-6">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <input
+                  type="text"
+                  value={logSearch}
+                  onChange={e => setLogSearch(e.target.value)}
+                  placeholder="Search by phone or message..."
+                  className="w-full pl-11 pr-4 py-3 rounded-xl bg-white dark:bg-black border border-gray-200 dark:border-gray-800 focus:ring-2 focus:ring-blue-500 outline-none text-sm"
+                />
+              </div>
               <div className="bg-white dark:bg-black rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm p-6">
                 <div className="space-y-6">
-                  {logs.map(log => (
+                  {filteredLogs.map(log => (
                     <div key={log.id} className="flex gap-4 p-4 bg-gray-50 dark:bg-zinc-900 rounded-xl">
                       <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-full h-fit">
                         <MessageSquare className="w-5 h-5 text-green-600 dark:text-green-400" />
@@ -484,15 +580,25 @@ export default function AdminDashboard() {
 
           {!isLoading && activeTab === 'reminders' && (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-              <div className="flex justify-between items-center mb-8">
+              <div className="flex justify-between items-center mb-6">
                 <h2 className="font-display text-3xl font-bold">Service Reminders</h2>
                 <button onClick={() => setIsManualRecordModalOpen(true)} className="px-4 py-2 bg-black dark:bg-white text-white dark:text-black rounded-lg font-medium hover:opacity-90 transition-opacity">
                   + Add Record
                 </button>
               </div>
+              <div className="relative mb-6">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <input
+                  type="text"
+                  value={recordSearch}
+                  onChange={e => setRecordSearch(e.target.value)}
+                  placeholder="Search by name, phone, car, service..."
+                  className="w-full pl-11 pr-4 py-3 rounded-xl bg-white dark:bg-black border border-gray-200 dark:border-gray-800 focus:ring-2 focus:ring-blue-500 outline-none text-sm"
+                />
+              </div>
               <div className="bg-white dark:bg-black rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm p-6">
                 <div className="space-y-4">
-                  {records.map(record => {
+                  {filteredRecords.map(record => {
                     const isDue = isBefore(new Date(record.nextServiceDate), new Date());
                     return (
                       <div key={record.id} className={`p-4 rounded-2xl border ${isDue ? 'bg-red-50 dark:bg-red-900/10 border-red-100 dark:border-red-900/30' : 'bg-gray-50 dark:bg-zinc-900 border-gray-100 dark:border-gray-800'}`}>

@@ -1,0 +1,55 @@
+## Phase 6 Review: Admin Search & Due Alerts
+
+### Phase Scope
+Add `bookingSearch`, `recordSearch`, `logSearch` state to `admin/page.tsx`. Filter respective arrays client-side. Add search bar UI to Bookings, Reminders, Logs tabs. Add "Cars Nearing Service Due" dashboard card (14-day window, count badge, expandable list, click-to-call).
+
+---
+
+### 1. Spec Adherence ✅
+
+**Search/filter:**
+- `bookingSearch`, `recordSearch`, `logSearch` state added ✅
+- `filteredBookings` — filters by `customerName`, `phone`, `carModel`, `serviceType`, `status` ✅
+- `filteredRecords` — filters by `customerName`, `phone`, `carModel`, `serviceType` ✅
+- `filteredLogs` — filters by `phone`, `message` ✅
+- Search bars added above each respective list ✅
+- When search empty → shows all (pass-through) ✅
+
+**Nearing Due Card:**
+- `nearingDue = records.filter(r => isBefore(new Date(r.nextServiceDate), addDays(new Date(), 14)))` — 14-day window ✅
+- Count badge (orange) ✅
+- Expandable via `nearingDueExpanded` state + `ChevronDown` ✅
+- Per-row: name, car, service, due date ✅
+- Click-to-call `<a href="tel:...">` per row ✅
+- Placed on dashboard above "Recent Emergency Bookings" ✅
+
+### 2. Code Quality ✅
+
+All filter logic is simple one-liners before the return statement. No mutations to original state. `nearingDue` includes overdue records (before today) — correct, they're most urgent. Consistent search input pattern across all three tabs.
+
+### 3. Test Coverage ✅
+
+**admin-search-due.test.tsx (9 tests):**
+- Nearing due badge count ✅
+- Expanding nearing due list ✅
+- Click-to-call link ✅
+- Bookings search input renders ✅
+- Bookings filter by name ✅
+- Reminders search input renders ✅
+- Reminders filter by name ✅
+- Logs search input renders ✅
+- Logs filter by message ✅
+
+102/102 total tests pass ✅
+
+---
+
+```
+---
+VERDICT: APPROVE
+SUMMARY: Admin search/filter and nearing-due card fully implemented with correct 14-day window, expandable list, click-to-call, and comprehensive test coverage.
+CONFIDENCE: HIGH
+---
+KEY_ISSUES:
+- None
+```
