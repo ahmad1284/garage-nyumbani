@@ -19,6 +19,7 @@ import { toast } from 'sonner';
 import { analyzeCarIssue } from './actions';
 import jsPDF from 'jspdf';
 import { format } from 'date-fns';
+import { generateHistoryPDF } from '@/lib/pdf-utils';
 
 export default function CustomerLanding() {
   const { t, language, setLanguage } = useLanguage();
@@ -573,6 +574,15 @@ export default function CustomerLanding() {
           </form>
           {history && history.length > 0 && (
             <div className="space-y-4">
+              <div className="flex justify-end mb-4">
+                <button
+                  onClick={() => generateHistoryPDF(history, searchPhone)}
+                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-black dark:bg-white text-white dark:text-black text-sm font-medium hover:bg-gray-800 dark:hover:bg-gray-200 transition-colors"
+                >
+                  <Download className="w-4 h-4" />
+                  {language === 'sw' ? 'Pakua PDF' : 'Download PDF'}
+                </button>
+              </div>
               {history.map((booking, idx) => {
                 const service = SERVICES.find(s => s.id === booking.serviceType);
                 const serviceLabel = service ? (language === 'sw' ? service.titleSw : service.titleEn) : booking.serviceType;
