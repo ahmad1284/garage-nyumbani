@@ -150,8 +150,9 @@ describe('CustomerLanding — Phase 2', () => {
   describe('Contact Section', () => {
     test('renders phone number as tap-to-call link', () => {
       renderWithProviders(<CustomerLanding />);
-      const phoneLink = screen.getByRole('link', { name: PHONE_NUMBER });
-      expect(phoneLink).toHaveAttribute('href', `tel:${PHONE_NUMBER}`);
+      const phoneLinks = screen.getAllByRole('link', { name: PHONE_NUMBER });
+      expect(phoneLinks.length).toBeGreaterThan(0);
+      expect(phoneLinks[0]).toHaveAttribute('href', `tel:${PHONE_NUMBER}`);
     });
 
     test('renders WhatsApp CTA link', () => {

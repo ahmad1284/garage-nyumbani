@@ -6,6 +6,8 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useLanguage } from '@/components/language-provider';
 import { useTheme } from 'next-themes';
+import { Footer } from '@/components/footer';
+import { CallNowFAB } from '@/components/call-now-fab';
 import {
   Wrench, AlertTriangle, Search, Calendar, MapPin, Phone, User, Car, Clock,
   Moon, Sun, Globe, ChevronRight, Sparkles, CheckCircle, XCircle, Download,
@@ -559,6 +561,9 @@ export default function CustomerLanding() {
           </motion.div>
         </div>
       )}
+
+      <Footer />
+      <CallNowFAB />
     </div>
   );
 }
