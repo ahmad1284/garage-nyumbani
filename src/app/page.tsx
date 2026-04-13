@@ -241,7 +241,13 @@ export default function CustomerLanding() {
       </section>
 
       {/* Service Catalog */}
-      <section className="py-20 bg-gray-50 dark:bg-zinc-900">
+      <motion.section
+        initial={{ opacity: 0, y: 20 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        transition={{ duration: 0.5 }}
+        className="py-20 bg-gray-50 dark:bg-zinc-900"
+      >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <h2 className="font-display text-3xl font-bold mb-4 text-center">{t.servicesTitle}</h2>
           <p className="text-center text-gray-500 dark:text-gray-400 mb-12 text-sm">{t.noteDistance}</p>
@@ -257,11 +263,25 @@ export default function CustomerLanding() {
                   transition={{ delay: idx * 0.05 }}
                   className="bg-white dark:bg-black rounded-3xl shadow-sm border border-gray-100 dark:border-gray-800 overflow-hidden"
                 >
+                  {/* Card image header */}
+                  <div
+                    className="relative h-40 overflow-hidden"
+                    style={{ background: service.fallbackBg }}
+                  >
+                    <Image
+                      src={service.imageUrl}
+                      alt={service.titleEn}
+                      fill
+                      className="object-cover"
+                      referrerPolicy="no-referrer"
+                    />
+                    <div className="absolute inset-0 bg-black/30" />
+                    <span className="absolute bottom-3 left-4 text-4xl">{service.icon}</span>
+                  </div>
                   <button
                     onClick={() => setExpandedService(isExpanded ? null : service.id)}
                     className="w-full p-6 flex items-start gap-4 text-left hover:bg-gray-50 dark:hover:bg-zinc-900 transition-colors"
                   >
-                    <span className="text-3xl flex-shrink-0">{service.icon}</span>
                     <div className="flex-1 min-w-0">
                       <h3 className="font-semibold text-sm leading-tight mb-1">
                         {language === 'sw' ? service.titleSw : service.titleEn}
@@ -305,7 +325,7 @@ export default function CustomerLanding() {
             })}
           </div>
         </div>
-      </section>
+      </motion.section>
 
       {/* Booking Form */}
       <section id="book" className="py-20">
@@ -431,7 +451,13 @@ export default function CustomerLanding() {
       </section>
 
       {/* FAQ Section */}
-      <section className="py-20 bg-gray-50 dark:bg-zinc-900">
+      <motion.section
+        initial={{ opacity: 0, y: 20 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        transition={{ duration: 0.5 }}
+        className="py-20 bg-gray-50 dark:bg-zinc-900"
+      >
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
           <h2 className="font-display text-3xl font-bold mb-12 text-center">{t.faqTitle}</h2>
           <div className="space-y-4">
@@ -470,10 +496,16 @@ export default function CustomerLanding() {
             })}
           </div>
         </div>
-      </section>
+      </motion.section>
 
       {/* Contact / Business Info Section */}
-      <section className="py-20">
+      <motion.section
+        initial={{ opacity: 0, y: 20 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        transition={{ duration: 0.5 }}
+        className="py-20"
+      >
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h2 className="font-display text-3xl font-bold mb-4">{t.contactUs}</h2>
           <p className="text-gray-500 dark:text-gray-400 mb-12">{t.workingHours}</p>
@@ -510,10 +542,17 @@ export default function CustomerLanding() {
             </a>
           </div>
         </div>
-      </section>
+      </motion.section>
 
       {/* History Lookup */}
-      <section id="history" className="py-20 bg-gray-50 dark:bg-zinc-900">
+      <motion.section
+        id="history"
+        initial={{ opacity: 0, y: 20 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        transition={{ duration: 0.5 }}
+        className="py-20 bg-gray-50 dark:bg-zinc-900"
+      >
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-10">
             <h2 className="font-display text-3xl font-bold mb-4">{t.searchHistory}</h2>
@@ -572,7 +611,7 @@ export default function CustomerLanding() {
             </div>
           )}
         </div>
-      </section>
+      </motion.section>
 
       {/* Booking Confirmation Modal */}
       {confirmedBooking && (

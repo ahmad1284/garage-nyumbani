@@ -1,0 +1,55 @@
+## Phase 4 Review: Service Card Images & Section Animations
+
+### Phase Scope
+Add `imageUrl` + `fallbackBg` to `ServiceItem`, update service cards with `next/image` header (160px), emoji overlay, fallback gradient. Add `motion.section` wrappers with `whileInView` to Service Catalog, FAQ, Contact, and History sections. Stagger service card entries.
+
+---
+
+### 1. Spec Adherence ✅
+
+**Service card images:**
+- `imageUrl` and `fallbackBg` added to all 9 `ServiceItem` entries in `constants.ts` ✅
+- Card header: `relative h-40 overflow-hidden` div with `next/image fill + object-cover` ✅
+- `fallbackBg` applied as inline `style={{ background: service.fallbackBg }}` ✅
+- `bg-black/30` overlay for contrast ✅
+- Emoji rendered as `absolute bottom-3 left-4 text-4xl` overlay ✅
+- All Unsplash URLs under `images.unsplash.com` domain (already in `next.config.ts` remote patterns) ✅
+
+**Animations:**
+- Service Catalog, FAQ, Contact, History sections wrapped in `motion.section` with `initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}` ✅
+- Service card `motion.div` entries already had `whileInView` + `transition={{ delay: idx * 0.05 }}` stagger from Phase 3 ✅
+
+### 2. Code Quality ✅
+
+Clean implementation. Icon removed from button row (now lives in image overlay) — correct. The `motion.section` mock was missing from `page.test.tsx` and was fixed. No hardcoded values; all image URLs in `constants.ts`.
+
+Minor: `referrerPolicy="no-referrer"` on card images is consistent with hero image pattern.
+
+### 3. Test Coverage ✅
+
+**service-cards.test.tsx (5 tests):**
+- `imageUrl`/`fallbackBg` defined and match Unsplash domain ✅
+- Each service renders an `<img>` with correct `alt` and `src` ✅
+- Each service icon appears in DOM ✅
+- Section elements render ✅
+- All service titles present ✅
+
+**page.test.tsx:** `motion.section` mock added — all 86 tests pass ✅
+
+### 4. Minor Observations (non-blocking)
+
+1. **`fill` prop warning in tests:** Mock `next/image` passes `fill` prop to `<img>`, causing React DOM warning. Not a failure, pre-existing pattern from earlier phases. Could add `fill` to destructure-and-drop in mock but not worth touching now.
+
+2. **Fallback gradient only visible if image fails to load:** In test environment (mocked image), fallback gradient renders correctly via inline style. In production the gradient shows until image loads — correct progressive enhancement.
+
+---
+
+```
+---
+VERDICT: APPROVE
+SUMMARY: Service card images with fallback gradients and emoji overlays fully implemented; motion.section wrappers added to all major sections; 86/86 tests pass.
+CONFIDENCE: HIGH
+---
+KEY_ISSUES:
+- None
+```
