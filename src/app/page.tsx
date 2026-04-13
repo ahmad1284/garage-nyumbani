@@ -20,7 +20,7 @@ import { format } from 'date-fns';
 
 export default function CustomerLanding() {
   const { t, language, setLanguage } = useLanguage();
-  const { theme, setTheme } = useTheme();
+  const { resolvedTheme, setTheme } = useTheme();
 
   const [formData, setFormData] = useState({
     customerName: '',
@@ -138,10 +138,10 @@ export default function CustomerLanding() {
               {language.toUpperCase()}
             </button>
             <button
-              onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+              onClick={() => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')}
               className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
             >
-              {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+              {resolvedTheme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
             </button>
             <Link href="/admin" className="hidden sm:flex items-center gap-2 text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400">
               {t.adminLogin} <ChevronRight className="w-4 h-4" />
