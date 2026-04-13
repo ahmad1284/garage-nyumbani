@@ -45,6 +45,7 @@ export default function CustomerLanding() {
   const [confirmedBooking, setConfirmedBooking] = useState<Booking | null>(null);
   const [expandedService, setExpandedService] = useState<string | null>(null);
   const [expandedFaq, setExpandedFaq] = useState<number | null>(null);
+  const [serviceSearch, setServiceSearch] = useState('');
 
   const handleAiAnalyze = async () => {
     if (!formData.otherDescription) return;
@@ -122,6 +123,18 @@ export default function CustomerLanding() {
 
   const selectedService = SERVICES.find(s => s.id === formData.serviceType);
 
+  const filteredServices = serviceSearch.trim()
+    ? SERVICES.filter(s => {
+        const q = serviceSearch.toLowerCase();
+        return (
+          s.titleEn.toLowerCase().includes(q) ||
+          s.titleSw.toLowerCase().includes(q) ||
+          s.descriptionEn.toLowerCase().includes(q) ||
+          s.descriptionSw.toLowerCase().includes(q)
+        );
+      })
+    : SERVICES;
+
   return (
     <div className="min-h-screen">
       {/* Navbar */}
@@ -183,7 +196,47 @@ export default function CustomerLanding() {
                 {t.searchHistory}
               </a>
             </div>
+
+            {/* Marquee */}
+            <div className="mt-8 overflow-hidden rounded-full bg-white/10 backdrop-blur-sm py-2">
+              <div className="marquee-track text-white/80 text-sm font-medium" aria-label="24/7 Service ticker">
+                {[...Array(4)].map((_, i) => (
+                  <span key={i} className="px-6 whitespace-nowrap">
+                    🔧 24/7 Service &nbsp;•&nbsp; Zanzibar Nzima &nbsp;•&nbsp; Huduma ya Dharura &nbsp;•&nbsp; Mobile Garage &nbsp;•&nbsp;
+                  </span>
+                ))}
+              </div>
+            </div>
           </motion.div>
+        </div>
+      </section>
+
+      {/* Service Search Bar */}
+      <section className="py-8 bg-white dark:bg-black border-b border-gray-100 dark:border-gray-800">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="relative max-w-xl mx-auto">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <input
+              type="text"
+              value={serviceSearch}
+              onChange={e => setServiceSearch(e.target.value)}
+              placeholder={language === 'sw' ? 'Tafuta huduma... (mf: breki, injini)' : 'Search services... (e.g. brake, engine)'}
+              className="w-full pl-12 pr-4 py-3 rounded-full bg-gray-50 dark:bg-zinc-900 border border-gray-200 dark:border-gray-800 focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm"
+            />
+            {serviceSearch && (
+              <button
+                onClick={() => setServiceSearch('')}
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-xs"
+              >
+                ✕
+              </button>
+            )}
+          </div>
+          {serviceSearch && (
+            <p className="text-center text-xs text-gray-400 mt-2">
+              {filteredServices.length} {language === 'sw' ? 'huduma zimepatikana' : 'services found'}
+            </p>
+          )}
         </div>
       </section>
 
@@ -193,7 +246,7 @@ export default function CustomerLanding() {
           <h2 className="font-display text-3xl font-bold mb-4 text-center">{t.servicesTitle}</h2>
           <p className="text-center text-gray-500 dark:text-gray-400 mb-12 text-sm">{t.noteDistance}</p>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {SERVICES.map((service, idx) => {
+            {filteredServices.map((service, idx) => {
               const isExpanded = expandedService === service.id;
               return (
                 <motion.div
