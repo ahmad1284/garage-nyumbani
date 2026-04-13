@@ -12,7 +12,7 @@ gates:
   pr:
     status: pending
 iteration: 1
-build_complete: false
+build_complete: true
 history: []
 started_at: '2026-04-12T12:52:43.004Z'
-updated_at: '2026-04-12T12:52:43.005Z'
+updated_at: '2026-04-13T06:41:47.047Z'

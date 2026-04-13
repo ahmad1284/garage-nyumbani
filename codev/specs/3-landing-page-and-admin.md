@@ -51,15 +51,15 @@ The current landing page (`src/app/page.tsx`) and admin dashboard (`src/app/admi
 - Fix theme toggle (use `resolvedTheme` from `next-themes` instead of `theme`)
 - New `<Footer>` component: Google Maps embed (iframe), WhatsApp CTA, Facebook/Instagram links, address block (Mpendae, Zanzibar), opening hours
 - Persistent `<CallNowFAB>` component: fixed bottom-right, visible only on mobile (`sm:hidden`), links `tel:PHONE_NUMBER`, subtle pulse animation
-- Search bar section immediately after hero: filters SERVICES list client-side by title/description, scrolls to filtered service card
-- History PDF: user enters phone → `handleSearch` fetches bookings → "Download PDF" button generates formatted jsPDF with booking history (booking ID, date, service, car, status) and saves to disk
+- Search bar section immediately after hero: filters SERVICES list client-side by title/description — matching cards shown, non-matching hidden (filter pattern, not scroll-to)
+- History PDF: user enters phone → `handleSearch` fetches bookings → "Download PDF" button generates formatted jsPDF with booking history (booking ID, date, service, car, status) and saves to disk. **Note**: no verification gate — any phone number returns that number's bookings. Accepted trade-off: bookings contain no sensitive financial data; acceptable for MVP.
 - Swahili default: change `language-provider.tsx` initial state from `'en'` to `'sw'`
 - Service card images: add `image` field to `ServiceItem` in `constants.ts` with Unsplash URLs per service; replace emoji icon in card header with `next/image`
 - Framer Motion: wrap each section with `motion.section` using `whileInView` fade-in; stagger service card entries; animate hero text lines
 - Hero marquee: horizontal scrolling ticker below hero CTA buttons — "🔧 24/7 Service • Zanzibar Nzima • Huduma ya Dharura •" repeating
 
 **Admin Dashboard**
-- Search bar at top of each tab (Bookings, Records, Logs): filters list client-side by customer name, phone, car model, service type
+- Search bar at top of each tab (Bookings, Reminders/Records, Logs): filters list client-side by customer name, phone, car model, service type. "Records" = existing "Reminders" tab which displays `ServiceRecord` data — no new tab added.
 - "Cars Nearing Service Due" dashboard card: reads `records` state, flags those where `nextServiceDate` is within 14 days; count badge + expandable list with customer name, phone, car, due date; click-to-call button
 - PDF download for service records: extend `generateReceipt`-style function; admin can download full service history for a customer (all records matching phone), formatted as a multi-page jsPDF document
 - Automated reminders modal: admin selects timeframe (e.g., "cars due within 7 days"), system generates WhatsApp deep-link messages for each; optionally trigger Africa's Talking SMS batch for those with phone numbers only; log reminder sent in `WhatsAppLog`
@@ -154,7 +154,7 @@ New function `generateServiceHistoryPDF(records: ServiceRecord[])`:
 1. Admin clicks "Send Reminders" for nearing-due cars
 2. Modal shows list with pre-composed WhatsApp message per customer
 3. **WhatsApp flow**: Show customers one at a time — "Send to [Name]" button opens deep link, admin clicks through sequentially. No mass-tab-open. After each, admin marks as sent.
-4. **SMS flow** (requires Africa's Talking): "Send All via SMS" calls `POST /api/reminders/send` which loops through Africa's Talking API. Shows confirmation dialog with count + estimated cost before sending.
+4. **SMS flow** (requires Africa's Talking): "Send All via SMS" button is **hidden** if `AT_API_KEY` env var is not set. When present, calls `POST /api/reminders/send` which loops through Africa's Talking API. Shows confirmation dialog with count + estimated cost before sending.
 5. Each sent reminder creates a `WhatsAppLog` entry with `type: 'reminder'`
 
 ---
@@ -219,3 +219,13 @@ New function `generateServiceHistoryPDF(records: ServiceRecord[])`:
 **User feedback**: Removed OTP security flow entirely. History is open — enter phone → get PDF. No verification gate.
 
 **Gemini**: Skipped — daily quota exhausted on free tier key.
+
+### Round 2 — Claude (porch iter1)
+
+**Verdict**: COMMENT | Confidence: HIGH
+
+**Key feedback incorporated**:
+- Search bar UX clarified: filter pattern (hide non-matching), not scroll-to
+- Privacy trade-off for open phone lookup documented explicitly in spec
+- "Records" tab ambiguity resolved: refers to existing Reminders tab, no new tab
+- Africa's Talking SMS button hidden when `AT_API_KEY` not set — no "optionally" ambiguity
