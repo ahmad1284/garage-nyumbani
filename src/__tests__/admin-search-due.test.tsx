@@ -22,6 +22,9 @@ jest.mock('next-themes', () => ({
   useTheme: () => ({ resolvedTheme: 'light', setTheme: jest.fn() }),
 }));
 jest.mock('sonner', () => ({ toast: { success: jest.fn(), error: jest.fn() } }));
+
+// Mock fetch for /api/reminders/sms-enabled
+global.fetch = jest.fn().mockResolvedValue({ ok: true, json: async () => ({ enabled: false }) });
 jest.mock('motion/react', () => ({
   motion: {
     div: ({ children, ...props }: React.HTMLAttributes<HTMLDivElement>) => <div {...props}>{children}</div>,
@@ -138,14 +141,14 @@ describe('Admin Reminders Search', () => {
   test('search input renders in reminders tab', async () => {
     renderAdmin();
     await waitFor(() => screen.getByText('Cars Nearing Service Due'));
-    fireEvent.click(screen.getByRole('button', { name: /Reminders/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^Reminders$/i }));
     expect(screen.getByPlaceholderText(/Search by name, phone, car, service/i)).toBeInTheDocument();
   });
 
   test('filters records by customer name', async () => {
     renderAdmin();
     await waitFor(() => screen.getByText('Cars Nearing Service Due'));
-    fireEvent.click(screen.getByRole('button', { name: /Reminders/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^Reminders$/i }));
     const searchInput = screen.getByPlaceholderText(/Search by name, phone, car, service/i);
     fireEvent.change(searchInput, { target: { value: 'Alice' } });
     expect(screen.getByText(/Alice.*Toyota Axio|Toyota Axio.*Alice/i)).toBeInTheDocument();

@@ -3,17 +3,19 @@
 import React, { useState } from 'react';
 import { ServiceRecord } from '@/lib/storage';
 import { WHATSAPP_NUMBER } from '@/lib/constants';
-import { XCircle, MessageSquare, CheckCircle, ChevronRight } from 'lucide-react';
+import { XCircle, MessageSquare, CheckCircle, ChevronRight, Phone } from 'lucide-react';
 
 interface ReminderModalProps {
   records: ServiceRecord[];
+  smsEnabled?: boolean;
   onClose: () => void;
   onReminderSent: (recordId: string) => void;
 }
 
-export function ReminderModal({ records, onClose, onReminderSent }: ReminderModalProps) {
+export function ReminderModal({ records, smsEnabled, onClose, onReminderSent }: ReminderModalProps) {
   const [currentIdx, setCurrentIdx] = useState(0);
   const [sent, setSent] = useState<Set<string>>(new Set());
+  const [smsSending, setSmsSending] = useState(false);
 
   const current = records[currentIdx];
   const isDone = currentIdx >= records.length;
@@ -31,6 +33,27 @@ export function ReminderModal({ records, onClose, onReminderSent }: ReminderModa
 
   const handleNext = () => {
     setCurrentIdx(i => i + 1);
+  };
+
+  const handleSmsBatch = async () => {
+    setSmsSending(true);
+    try {
+      const targets = records.map(r => ({
+        id: r.id,
+        phone: r.phone,
+        customerName: r.customerName,
+        carModel: r.carModel,
+        serviceType: r.serviceType,
+      }));
+      await fetch('/api/reminders/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ targets }),
+      });
+      records.forEach(r => onReminderSent(r.id));
+    } finally {
+      setSmsSending(false);
+    }
   };
 
   return (
@@ -85,6 +108,16 @@ export function ReminderModal({ records, onClose, onReminderSent }: ReminderModa
                   Skip <ChevronRight className="w-4 h-4" />
                 </button>
               </div>
+              {smsEnabled && (
+                <button
+                  onClick={handleSmsBatch}
+                  disabled={smsSending}
+                  className="w-full mt-3 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                >
+                  <Phone className="w-4 h-4" />
+                  {smsSending ? 'Sending SMS...' : `Send SMS to All (${records.length})`}
+                </button>
+              )}
             </>
           )}
         </div>

@@ -8,6 +8,7 @@ import { MECHANICS, SERVICES } from '@/lib/constants';
 import { InvoiceDocument } from '@/components/invoice-document';
 import { NearingDueCard } from '@/app/admin/components/nearing-due-card';
 import { ReminderModal } from '@/app/admin/components/reminder-modal';
+import { generateServiceHistoryPDF } from '@/lib/admin-pdf-utils';
 import {
   LayoutDashboard, Users, FileText, MessageSquare, Download,
   CheckCircle, Clock, XCircle, AlertCircle, Wrench, ChevronLeft, Calendar, Plus, Trash2,
@@ -58,6 +59,7 @@ export default function AdminDashboard() {
   const [recordSearch, setRecordSearch] = useState('');
   const [logSearch, setLogSearch] = useState('');
   const [reminderModalOpen, setReminderModalOpen] = useState(false);
+  const [smsEnabled, setSmsEnabled] = useState(false);
 
   useEffect(() => {
     // Restore session from sessionStorage on mount
@@ -80,6 +82,11 @@ export default function AdminDashboard() {
       })
       .catch(() => toast.error('Failed to load data'))
       .finally(() => setIsLoading(false));
+
+    fetch('/api/reminders/sms-enabled')
+      .then(r => r.json())
+      .then(({ enabled }) => setSmsEnabled(!!enabled))
+      .catch(() => {});
   }, [isAuthenticated]);
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -408,6 +415,16 @@ export default function AdminDashboard() {
                 ))}
               </div>
               <NearingDueCard nearingDue={nearingDue} />
+              {nearingDue.length > 0 && (
+                <div className="flex justify-end -mt-4 mb-8">
+                  <button
+                    onClick={() => setReminderModalOpen(true)}
+                    className="flex items-center gap-2 px-4 py-2 rounded-lg bg-orange-500 text-white text-sm font-medium hover:bg-orange-600 transition-colors"
+                  >
+                    <MessageSquare className="w-4 h-4" /> Send Reminders ({nearingDue.length})
+                  </button>
+                </div>
+              )}
 
               <h3 className="font-display text-xl font-bold mb-6">Recent Emergency Bookings</h3>
               <div className="bg-white dark:bg-black rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden">
@@ -547,9 +564,17 @@ export default function AdminDashboard() {
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
               <div className="flex justify-between items-center mb-6">
                 <h2 className="font-display text-3xl font-bold">Service Reminders</h2>
-                <button onClick={() => setIsManualRecordModalOpen(true)} className="px-4 py-2 bg-black dark:bg-white text-white dark:text-black rounded-lg font-medium hover:opacity-90 transition-opacity">
-                  + Add Record
-                </button>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => generateServiceHistoryPDF(records)}
+                    className="flex items-center gap-2 px-4 py-2 bg-black dark:bg-white text-white dark:text-black rounded-lg font-medium hover:opacity-90 transition-opacity text-sm"
+                  >
+                    <Download className="w-4 h-4" /> Download PDF
+                  </button>
+                  <button onClick={() => setIsManualRecordModalOpen(true)} className="px-4 py-2 bg-black dark:bg-white text-white dark:text-black rounded-lg font-medium hover:opacity-90 transition-opacity">
+                    + Add Record
+                  </button>
+                </div>
               </div>
               <div className="relative mb-6">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -870,8 +895,14 @@ export default function AdminDashboard() {
       {reminderModalOpen && nearingDue.length > 0 && (
         <ReminderModal
           records={nearingDue}
+          smsEnabled={smsEnabled}
           onClose={() => setReminderModalOpen(false)}
-          onReminderSent={() => {}}
+          onReminderSent={async () => {
+            try {
+              const updatedLogs = await storageService.getLogs();
+              setLogs(updatedLogs);
+            } catch { /* best effort */ }
+          }}
         />
       )}
     </div>

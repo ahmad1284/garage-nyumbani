@@ -26,6 +26,7 @@ export interface WhatsAppLog {
   phone: string;
   message: string;
   sentAt: string;
+  type?: string;
 }
 
 export interface ServiceRecord {
