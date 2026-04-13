@@ -1,0 +1,62 @@
+Let me find the actual spec and plan files (they seem to be .txt not .md):I need to find the actual plan. The `.txt` files seem to be review outputs. Let me look for the plan and spec elsewhere:Now let me read the plan (phase-3 section) and spec, plus the implementation files:Now let me read the actual implementation files for phase-3:Now let me check the previous iteration reviews to understand context:Good. Now I have all the context I need. Let me verify the phase-3 deliverables against the plan:
+
+**Phase 3: Search Bar & Marquee** requires:
+1. `src/app/page.tsx` — add `searchQuery` state; filter SERVICES by query; add search bar section after hero; add CSS marquee below hero CTAs
+2. `src/app/globals.css` — add `@keyframes marquee-scroll` for CSS-only marquee
+3. **Success Criteria**: Type "brake" → only brake-related cards visible; Clear search → all cards visible; Marquee scrolls continuously
+
+Let me verify the key implementations:
+
+**1. Search Bar (page.tsx lines 48, 126-136, 214-241)**
+- ✅ `serviceSearch` state added (line 48)
+- ✅ `filteredServices` computed with filter on `titleEn`, `titleSw`, `descriptionEn`, `descriptionSw` (lines 126-136)
+- ✅ Search bar section rendered after hero (lines 214-241)
+- ✅ Service catalog uses `filteredServices` instead of `SERVICES` (line 249)
+- ✅ Clear button (✕) resets search (lines 226-230)
+- ✅ Result count displayed when searching (lines 235-239)
+
+**2. Marquee (page.tsx lines 200-209)**
+- ✅ Marquee rendered below hero CTAs
+- ✅ Contains "24/7 Service • Zanzibar Nzima • Huduma ya Dharura •"
+- ✅ 4 copies for seamless loop
+- ✅ Uses `marquee-track` CSS class with `aria-label`
+
+**3. CSS (globals.css lines 89-102)**
+- ✅ `@keyframes marquee-scroll` defined
+- ✅ `.marquee-track` with flex, `width: max-content`, 20s linear infinite
+- ✅ Pause on hover — nice touch
+
+**4. Tests (search-marquee.test.tsx)**
+- ✅ Renders search input
+- ✅ Shows all services when empty
+- ✅ Filters services by keyword
+- ✅ Shows result count
+- ✅ Clears search on ✕ click
+- ✅ Marquee ticker renders
+- ✅ Marquee contains expected text
+
+**5. page.test.tsx updates**
+- ✅ Motion mock updated to include `motion.section` (was just `motion.div` before — needed since marquee section uses it... actually checking, no — the mock in `page.test.tsx` still only mocks `motion.div`, but the page uses `motion.div` for cards. Let me check if this breaks.)
+
+Let me check if the `page.test.tsx` mock is sufficient:
+
+Looking at `page.test.tsx` line 51-55, the mock only has `motion.div`. But `search-marquee.test.tsx` line 39-43 has both `motion.div` and `motion.section`. The page doesn't seem to use `motion.section` — it uses `motion.div` for service cards (line 252). So the `page.test.tsx` mock should be fine for the tests it runs, and the `search-marquee.test.tsx` mock adds `motion.section` defensively.
+
+Let me verify tests pass:All 7 tests pass. The warnings are just React DOM complaining about unknown properties from the motion mock — harmless in tests.
+
+Let me also quickly verify the page tests still pass:All 12 page tests pass too. 
+
+---
+VERDICT: APPROVE
+SUMMARY: Phase 3 (Search Bar & Marquee) fully implements all plan deliverables with solid tests — search filtering, clear button, result count, CSS marquee, and 7 passing tests.
+CONFIDENCE: HIGH
+---
+
+KEY_ISSUES: None
+
+**Details:**
+
+- **Spec Adherence**: ✅ All three success criteria met — search filters services by keyword, clearing restores all cards, marquee scrolls continuously with the specified text.
+- **Code Quality**: ✅ Clean implementation. `filteredServices` is computed inline (no unnecessary effect). Search bar has bilingual placeholder, clear button, and result count. Marquee uses semantic `aria-label`. Pause-on-hover is a nice UX touch.
+- **Test Coverage**: ✅ 7 dedicated tests in `search-marquee.test.tsx` cover: rendering, filtering, result count, clearing, and marquee content. Existing `page.test.tsx` (12 tests) continues to pass.
+- **Plan Alignment**: ✅ Both files specified in the plan (`page.tsx`, `globals.css`) were modified with exactly the features described. No scope creep into phase-4 territory (no images, no `motion.section` wrappers on page sections).
