@@ -6,10 +6,12 @@ import Link from 'next/link';
 import { storageService, Booking, BookingStatus, ServiceRecord, WhatsAppLog, setAdminToken, getAdminToken } from '@/lib/storage';
 import { MECHANICS, SERVICES } from '@/lib/constants';
 import { InvoiceDocument } from '@/components/invoice-document';
+import { NearingDueCard } from '@/app/admin/components/nearing-due-card';
+import { ReminderModal } from '@/app/admin/components/reminder-modal';
 import {
   LayoutDashboard, Users, FileText, MessageSquare, Download,
   CheckCircle, Clock, XCircle, AlertCircle, Wrench, ChevronLeft, Calendar, Plus, Trash2,
-  Search, Phone, ChevronDown
+  Search
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { format, isBefore, addDays } from 'date-fns';
@@ -55,7 +57,7 @@ export default function AdminDashboard() {
   const [bookingSearch, setBookingSearch] = useState('');
   const [recordSearch, setRecordSearch] = useState('');
   const [logSearch, setLogSearch] = useState('');
-  const [nearingDueExpanded, setNearingDueExpanded] = useState(false);
+  const [reminderModalOpen, setReminderModalOpen] = useState(false);
 
   useEffect(() => {
     // Restore session from sessionStorage on mount
@@ -405,44 +407,7 @@ export default function AdminDashboard() {
                   </div>
                 ))}
               </div>
-              {/* Nearing Due Card */}
-              <div className="mb-8 bg-white dark:bg-black rounded-2xl border border-orange-100 dark:border-orange-900/30 shadow-sm overflow-hidden">
-                <button
-                  onClick={() => setNearingDueExpanded(x => !x)}
-                  className="w-full flex items-center justify-between p-5 hover:bg-orange-50 dark:hover:bg-orange-900/10 transition-colors"
-                >
-                  <div className="flex items-center gap-3">
-                    <Calendar className="w-5 h-5 text-orange-500" />
-                    <span className="font-semibold">Cars Nearing Service Due</span>
-                    <span className="px-2 py-0.5 rounded-full bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 text-xs font-bold">
-                      {nearingDue.length}
-                    </span>
-                  </div>
-                  <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${nearingDueExpanded ? 'rotate-180' : ''}`} />
-                </button>
-                {nearingDueExpanded && (
-                  <div className="border-t border-orange-100 dark:border-orange-900/30 divide-y divide-gray-100 dark:divide-gray-800">
-                    {nearingDue.length === 0 ? (
-                      <div className="p-4 text-center text-gray-500 text-sm">No cars due within 14 days.</div>
-                    ) : nearingDue.map(r => (
-                      <div key={r.id} className="p-4 flex items-center justify-between gap-4">
-                        <div>
-                          <div className="font-medium text-sm">{r.customerName} — {r.carModel}</div>
-                          <div className="text-xs text-gray-500 mt-0.5">
-                            {r.serviceType} · Due: {format(new Date(r.nextServiceDate), 'PP')}
-                          </div>
-                        </div>
-                        <a
-                          href={`tel:${r.phone}`}
-                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 text-xs font-medium hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors"
-                        >
-                          <Phone className="w-3.5 h-3.5" /> {r.phone}
-                        </a>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
+              <NearingDueCard nearingDue={nearingDue} />
 
               <h3 className="font-display text-xl font-bold mb-6">Recent Emergency Bookings</h3>
               <div className="bg-white dark:bg-black rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden">
@@ -900,6 +865,14 @@ export default function AdminDashboard() {
             </form>
           </motion.div>
         </div>
+      )}
+
+      {reminderModalOpen && nearingDue.length > 0 && (
+        <ReminderModal
+          records={nearingDue}
+          onClose={() => setReminderModalOpen(false)}
+          onReminderSent={() => {}}
+        />
       )}
     </div>
   );

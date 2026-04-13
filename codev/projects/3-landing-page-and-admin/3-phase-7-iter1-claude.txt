@@ -1,0 +1,61 @@
+## Phase 7 Review: Admin Extraction
+
+### Phase Scope
+Extract NearingDueCard and ReminderModal into `src/app/admin/components/`. Create `src/lib/admin-pdf-utils.ts`. Update `admin/page.tsx` to use extracted components.
+
+---
+
+### 1. Spec Adherence ✅
+
+**`nearing-due-card.tsx`:**
+- Accepts `nearingDue: ServiceRecord[]` prop ✅
+- Internal expand/collapse state ✅
+- Count badge, ChevronDown toggle, click-to-call links ✅
+- Functionally identical to Phase 6 inlined version ✅
+
+**`reminder-modal.tsx`:**
+- Sequential WhatsApp flow: one customer at a time ✅
+- Progress counter "N of M" ✅
+- WhatsApp button opens `wa.me/{phone}?text=...` ✅
+- Skip button advances to next ✅
+- Mark-sent visual state on Send button ✅
+- Done screen after all records processed ✅
+
+**`admin-pdf-utils.ts`:**
+- `generateServiceHistoryPDF(records)` ✅
+- Header: business name, generated date, total count ✅
+- Table: Customer, Car, Service, Last Service, Next Due ✅
+- Alternating row shading ✅
+- Page overflow guard + footer per page ✅
+- Saves as `Service_Records.pdf` ✅
+
+**`admin/page.tsx`:**
+- Inlined nearing-due card replaced with `<NearingDueCard nearingDue={nearingDue} />` ✅
+- `<ReminderModal>` wired to `reminderModalOpen` state ✅
+- Unused `ChevronDown`, `Phone` imports removed ✅
+- No regressions: all existing modal/tab logic intact ✅
+
+### 2. Code Quality ✅
+
+Clean extraction. Components are self-contained with their own state. `admin/page.tsx` is meaningfully shorter. `admin-pdf-utils.ts` follows the same pattern as `pdf-utils.ts` — consistent.
+
+### 3. Test Coverage ✅
+
+**admin-extraction.test.tsx (11 tests):**
+- NearingDueCard: badge, expand, call links, empty state ✅
+- ReminderModal: first record, skip, close, done screen ✅
+- generateServiceHistoryPDF: filename, header, empty array ✅
+
+113/113 total tests pass ✅
+
+---
+
+```
+---
+VERDICT: APPROVE
+SUMMARY: NearingDueCard, ReminderModal, and admin-pdf-utils extracted cleanly; admin/page.tsx shrunk; no regressions; 11 dedicated tests added.
+CONFIDENCE: HIGH
+---
+KEY_ISSUES:
+- None
+```
