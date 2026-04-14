@@ -33,7 +33,7 @@ jest.mock('next/link', () => ({
 
 // Mock next-themes
 jest.mock('next-themes', () => ({
-  useTheme: () => ({ resolvedTheme: 'light', setTheme: jest.fn() }),
+  useTheme: () => ({ theme: 'light', resolvedTheme: 'light', setTheme: jest.fn() }),
 }));
 
 // Mock sonner

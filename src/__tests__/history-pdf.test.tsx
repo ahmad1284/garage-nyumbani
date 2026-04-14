@@ -41,7 +41,7 @@ jest.mock('next/link', () => ({
   default: ({ children, href }: { children: React.ReactNode; href: string }) => <a href={href}>{children}</a>,
 }));
 jest.mock('next-themes', () => ({
-  useTheme: () => ({ resolvedTheme: 'light', setTheme: jest.fn() }),
+  useTheme: () => ({ theme: 'light', resolvedTheme: 'light', setTheme: jest.fn() }),
 }));
 jest.mock('sonner', () => ({ toast: { success: jest.fn(), error: jest.fn() } }));
 jest.mock('@/app/actions', () => ({ analyzeCarIssue: jest.fn().mockResolvedValue('advice') }));

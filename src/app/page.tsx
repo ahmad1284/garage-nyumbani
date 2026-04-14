@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -10,7 +10,7 @@ import { Footer } from '@/components/footer';
 import { CallNowFAB } from '@/components/call-now-fab';
 import {
   Wrench, AlertTriangle, Search, Calendar, MapPin, Phone, User, Car, Clock,
-  Moon, Sun, Globe, ChevronRight, Sparkles, CheckCircle, XCircle, Download,
+  Moon, Sun, Monitor, Globe, ChevronRight, Sparkles, CheckCircle, XCircle, Download,
   MessageSquare, ChevronDown, MessageCircle
 } from 'lucide-react';
 import { storageService, Booking } from '@/lib/storage';
@@ -23,7 +23,19 @@ import { generateHistoryPDF } from '@/lib/pdf-utils';
 
 export default function CustomerLanding() {
   const { t, language, setLanguage } = useLanguage();
-  const { resolvedTheme, setTheme } = useTheme();
+  const { theme, resolvedTheme, setTheme } = useTheme();
+  const [themeDropdownOpen, setThemeDropdownOpen] = useState(false);
+  const themeDropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (themeDropdownRef.current && !themeDropdownRef.current.contains(e.target as Node)) {
+        setThemeDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
 
   const [formData, setFormData] = useState({
     customerName: '',
@@ -139,12 +151,32 @@ export default function CustomerLanding() {
               <Globe className="w-4 h-4" />
               {language.toUpperCase()}
             </button>
-            <button
-              onClick={() => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')}
-              className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-            >
-              {resolvedTheme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
-            </button>
+            <div ref={themeDropdownRef} className="relative">
+              <button
+                onClick={() => setThemeDropdownOpen(o => !o)}
+                className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                aria-label="Theme selector"
+              >
+                {theme === 'system' ? <Monitor className="w-5 h-5" /> : resolvedTheme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+              </button>
+              {themeDropdownOpen && (
+                <div className="absolute right-0 mt-2 w-36 bg-white dark:bg-zinc-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg py-1 z-50">
+                  {([
+                    { value: 'light', label: 'Light', Icon: Sun },
+                    { value: 'dark',  label: 'Dark',  Icon: Moon },
+                    { value: 'system',label: 'System',Icon: Monitor },
+                  ] as const).map(({ value, label, Icon }) => (
+                    <button
+                      key={value}
+                      onClick={() => { setTheme(value); setThemeDropdownOpen(false); }}
+                      className={`w-full flex items-center gap-3 px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors ${theme === value ? 'font-semibold text-blue-600 dark:text-blue-400' : ''}`}
+                    >
+                      <Icon className="w-4 h-4" /> {label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
             <Link href="/admin" className="hidden sm:flex items-center gap-2 text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400">
               {t.adminLogin} <ChevronRight className="w-4 h-4" />
             </Link>
