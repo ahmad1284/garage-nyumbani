@@ -72,7 +72,8 @@ describe('CustomerLanding — Phase 2', () => {
     test('renders all 9 services', () => {
       renderWithProviders(<CustomerLanding />);
       SERVICES.forEach(service => {
-        expect(screen.getByText(service.titleSw)).toBeInTheDocument();
+        // title appears in both card h3 and select option
+        expect(screen.getAllByText(service.titleSw).length).toBeGreaterThan(0);
       });
     });
 
@@ -87,14 +88,15 @@ describe('CustomerLanding — Phase 2', () => {
       renderWithProviders(<CustomerLanding />);
       const firstService = SERVICES[0];
       expect(screen.queryByText(firstService.descriptionSw)).not.toBeInTheDocument();
-      fireEvent.click(screen.getByText(firstService.titleSw));
+      // click the h3 inside the card button (first match = card, not select option)
+      fireEvent.click(screen.getAllByText(firstService.titleSw)[0]);
       expect(screen.getByText(firstService.descriptionSw)).toBeInTheDocument();
     });
 
     test('collapses service when clicked again', () => {
       renderWithProviders(<CustomerLanding />);
       const firstService = SERVICES[0];
-      const titleEl = screen.getByText(firstService.titleSw);
+      const titleEl = screen.getAllByText(firstService.titleSw)[0];
       fireEvent.click(titleEl);
       expect(screen.getByText(firstService.descriptionSw)).toBeInTheDocument();
       fireEvent.click(titleEl);

@@ -64,12 +64,11 @@ describe('Service Card Images', () => {
     });
   });
 
-  test('service card icons appear as emoji overlay', () => {
+  test('service card images render without emoji overlay', () => {
     renderPage();
-    // Each icon should appear in the DOM (in image header)
+    // No emoji overlays on card images — icons removed per spec
     SERVICES.forEach(s => {
-      const icons = screen.getAllByText(s.icon);
-      expect(icons.length).toBeGreaterThan(0);
+      expect(screen.queryAllByText(s.icon).length).toBe(0);
     });
   });
 });
@@ -83,9 +82,9 @@ describe('Section Animations', () => {
 
   test('service cards have whileInView motion wrappers (rendered as divs)', () => {
     renderPage();
-    // Each service card title is rendered
+    // Each service card title is rendered (getAllByText: title appears in card + select option)
     SERVICES.forEach(s => {
-      expect(screen.getByText(s.titleSw)).toBeInTheDocument();
+      expect(screen.getAllByText(s.titleSw).length).toBeGreaterThan(0);
     });
   });
 });

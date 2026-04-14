@@ -1,8 +1,7 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import CustomerLanding from '@/app/page';
 import { LanguageProvider } from '@/components/language-provider';
-import { SERVICES } from '@/lib/constants';
 
 const localStorageMock = (() => {
   let store: Record<string, string> = {};
@@ -45,49 +44,6 @@ jest.mock('motion/react', () => ({
 beforeEach(() => localStorageMock.clear());
 
 const renderPage = () => render(<LanguageProvider><CustomerLanding /></LanguageProvider>);
-
-describe('Service Search Bar', () => {
-  test('renders search input', () => {
-    renderPage();
-    expect(screen.getByPlaceholderText(/tafuta huduma|search services/i)).toBeInTheDocument();
-  });
-
-  test('shows all services when search is empty', () => {
-    renderPage();
-    SERVICES.forEach(s => {
-      expect(screen.getByText(s.titleSw)).toBeInTheDocument();
-    });
-  });
-
-  test('filters services by keyword', () => {
-    renderPage();
-    const input = screen.getByPlaceholderText(/tafuta huduma|search services/i);
-    fireEvent.change(input, { target: { value: 'breki' } });
-    // Brake card should appear
-    expect(screen.getAllByText(/BREKI/i).length).toBeGreaterThan(0);
-    // Non-brake services should not appear in catalog
-    expect(screen.queryByText('SERVICE YA KAWAIDA (PERIODIC)')).not.toBeInTheDocument();
-  });
-
-  test('shows result count when searching', () => {
-    renderPage();
-    const input = screen.getByPlaceholderText(/tafuta huduma|search services/i);
-    fireEvent.change(input, { target: { value: 'breki' } });
-    expect(screen.getByText(/huduma zimepatikana|services found/i)).toBeInTheDocument();
-  });
-
-  test('clears search when ✕ clicked', () => {
-    renderPage();
-    const input = screen.getByPlaceholderText(/tafuta huduma|search services/i);
-    fireEvent.change(input, { target: { value: 'breki' } });
-    const clearBtn = screen.getByText('✕');
-    fireEvent.click(clearBtn);
-    expect((input as HTMLInputElement).value).toBe('');
-    SERVICES.forEach(s => {
-      expect(screen.getByText(s.titleSw)).toBeInTheDocument();
-    });
-  });
-});
 
 describe('Hero Marquee', () => {
   test('renders marquee ticker', () => {

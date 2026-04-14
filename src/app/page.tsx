@@ -46,8 +46,6 @@ export default function CustomerLanding() {
   const [confirmedBooking, setConfirmedBooking] = useState<Booking | null>(null);
   const [expandedService, setExpandedService] = useState<string | null>(null);
   const [expandedFaq, setExpandedFaq] = useState<number | null>(null);
-  const [serviceSearch, setServiceSearch] = useState('');
-
   const handleAiAnalyze = async () => {
     if (!formData.otherDescription) return;
     setIsAiThinking(true);
@@ -124,18 +122,6 @@ export default function CustomerLanding() {
 
   const selectedService = SERVICES.find(s => s.id === formData.serviceType);
 
-  const filteredServices = serviceSearch.trim()
-    ? SERVICES.filter(s => {
-        const q = serviceSearch.toLowerCase();
-        return (
-          s.titleEn.toLowerCase().includes(q) ||
-          s.titleSw.toLowerCase().includes(q) ||
-          s.descriptionEn.toLowerCase().includes(q) ||
-          s.descriptionSw.toLowerCase().includes(q)
-        );
-      })
-    : SERVICES;
-
   return (
     <div className="min-h-screen">
       {/* Navbar */}
@@ -198,48 +184,97 @@ export default function CustomerLanding() {
               </a>
             </div>
 
-            {/* Marquee */}
-            <div className="mt-8 overflow-hidden rounded-full bg-white/10 backdrop-blur-sm py-2">
-              <div className="marquee-track text-white/80 text-sm font-medium" aria-label="24/7 Service ticker">
-                {[...Array(4)].map((_, i) => (
-                  <span key={i} className="px-6 whitespace-nowrap">
-                    🔧 24/7 Service &nbsp;•&nbsp; Zanzibar Nzima &nbsp;•&nbsp; Huduma ya Dharura &nbsp;•&nbsp; Mobile Garage &nbsp;•&nbsp;
-                  </span>
-                ))}
-              </div>
-            </div>
           </motion.div>
+        </div>
+        {/* Marquee - full width */}
+        <div className="relative z-10 mt-8 overflow-hidden bg-white/10 backdrop-blur-sm py-2">
+          <div className="marquee-track text-white/80 text-sm font-medium" aria-label="24/7 Service ticker">
+            {[...Array(4)].map((_, i) => (
+              <span key={i} className="px-6 whitespace-nowrap">
+                24/7 Service &nbsp;•&nbsp; Zanzibar Nzima &nbsp;•&nbsp; Huduma ya Dharura &nbsp;•&nbsp; Mobile Garage &nbsp;•&nbsp;
+              </span>
+            ))}
+          </div>
         </div>
       </section>
 
-      {/* Service Search Bar */}
-      <section className="py-8 bg-white dark:bg-black border-b border-gray-100 dark:border-gray-800">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="relative max-w-xl mx-auto">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-            <input
-              type="text"
-              value={serviceSearch}
-              onChange={e => setServiceSearch(e.target.value)}
-              placeholder={language === 'sw' ? 'Tafuta huduma... (mf: breki, injini)' : 'Search services... (e.g. brake, engine)'}
-              className="w-full pl-12 pr-4 py-3 rounded-full bg-gray-50 dark:bg-zinc-900 border border-gray-200 dark:border-gray-800 focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm"
-            />
-            {serviceSearch && (
-              <button
-                onClick={() => setServiceSearch('')}
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-xs"
-              >
-                ✕
-              </button>
-            )}
+      {/* History Lookup */}
+      <motion.section
+        id="history"
+        initial={{ opacity: 0, y: 20 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        transition={{ duration: 0.5 }}
+        className="py-20 bg-gray-50 dark:bg-zinc-900"
+      >
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-10">
+            <h2 className="font-display text-3xl font-bold mb-4">{t.searchHistory}</h2>
+            <p className="text-gray-600 dark:text-gray-400">{t.enterPhone}</p>
           </div>
-          {serviceSearch && (
-            <p className="text-center text-xs text-gray-400 mt-2">
-              {filteredServices.length} {language === 'sw' ? 'huduma zimepatikana' : 'services found'}
-            </p>
+          <form onSubmit={handleSearch} className="flex gap-4 mb-12">
+            <input
+              type="tel"
+              value={searchPhone}
+              onChange={e => setSearchPhone(e.target.value)}
+              placeholder={t.searchPlaceholder}
+              className="flex-1 px-6 py-4 rounded-full bg-white dark:bg-black border border-gray-200 dark:border-gray-800 focus:ring-2 focus:ring-blue-500 outline-none transition-all shadow-sm"
+            />
+            <button type="submit" className="px-8 py-4 rounded-full bg-black dark:bg-white text-white dark:text-black font-medium hover:bg-gray-800 dark:hover:bg-gray-200 transition-colors flex items-center gap-2">
+              <Search className="w-5 h-5" />
+              <span className="hidden sm:inline">{t.search}</span>
+            </button>
+          </form>
+          {history && history.length > 0 && (
+            <div className="space-y-4">
+              <div className="flex justify-end mb-4">
+                <button
+                  onClick={() => generateHistoryPDF(history, searchPhone)}
+                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-black dark:bg-white text-white dark:text-black text-sm font-medium hover:bg-gray-800 dark:hover:bg-gray-200 transition-colors"
+                >
+                  <Download className="w-4 h-4" />
+                  {language === 'sw' ? 'Pakua PDF' : 'Download PDF'}
+                </button>
+              </div>
+              {history.map((booking, idx) => {
+                const service = SERVICES.find(s => s.id === booking.serviceType);
+                const serviceLabel = service ? (language === 'sw' ? service.titleSw : service.titleEn) : booking.serviceType;
+                return (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: idx * 0.1 }}
+                    key={booking.id}
+                    className="bg-white dark:bg-black p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4"
+                  >
+                    <div>
+                      <div className="flex items-center gap-3 mb-2">
+                        <span className="font-medium text-lg">{serviceLabel}</span>
+                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                          booking.status === 'Completed' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' :
+                          booking.status === 'In Progress' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400' :
+                          booking.status === 'Cancelled' ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400' :
+                          'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300'
+                        }`}>
+                          {t[booking.status.toLowerCase().replace(' ', '') as keyof typeof t] || booking.status}
+                        </span>
+                      </div>
+                      <div className="text-sm text-gray-500 dark:text-gray-400 font-mono">
+                        {booking.preferredDate} • {booking.carModel}
+                      </div>
+                    </div>
+                    {booking.isEmergency && (
+                      <div className="flex items-center gap-1 text-red-500 text-sm font-medium">
+                        <AlertTriangle className="w-4 h-4" /> {t.emergencyBadge}
+                      </div>
+                    )}
+                  </motion.div>
+                );
+              })}
+            </div>
           )}
         </div>
-      </section>
+      </motion.section>
 
       {/* Service Catalog */}
       <motion.section
@@ -253,7 +288,7 @@ export default function CustomerLanding() {
           <h2 className="font-display text-3xl font-bold mb-4 text-center">{t.servicesTitle}</h2>
           <p className="text-center text-gray-500 dark:text-gray-400 mb-12 text-sm">{t.noteDistance}</p>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredServices.map((service, idx) => {
+            {SERVICES.map((service, idx) => {
               const isExpanded = expandedService === service.id;
               return (
                 <motion.div
@@ -277,7 +312,6 @@ export default function CustomerLanding() {
                       referrerPolicy="no-referrer"
                     />
                     <div className="absolute inset-0 bg-black/30" />
-                    <span className="absolute bottom-3 left-4 text-4xl">{service.icon}</span>
                   </div>
                   <button
                     onClick={() => setExpandedService(isExpanded ? null : service.id)}
@@ -363,7 +397,7 @@ export default function CustomerLanding() {
                     <select value={formData.serviceType} onChange={e => setFormData({...formData, serviceType: e.target.value})} className="w-full px-4 py-3 rounded-xl bg-gray-50 dark:bg-black border border-gray-200 dark:border-gray-800 focus:ring-2 focus:ring-blue-500 outline-none transition-all appearance-none">
                       {SERVICES.map(s => (
                         <option key={s.id} value={s.id}>
-                          {s.icon} {language === 'sw' ? s.titleSw : s.titleEn}
+                          {language === 'sw' ? s.titleSw : s.titleEn}
                         </option>
                       ))}
                     </select>
@@ -496,130 +530,6 @@ export default function CustomerLanding() {
               );
             })}
           </div>
-        </div>
-      </motion.section>
-
-      {/* Contact / Business Info Section */}
-      <motion.section
-        initial={{ opacity: 0, y: 20 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true }}
-        transition={{ duration: 0.5 }}
-        className="py-20"
-      >
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="font-display text-3xl font-bold mb-4">{t.contactUs}</h2>
-          <p className="text-gray-500 dark:text-gray-400 mb-12">{t.workingHours}</p>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-10">
-            <div className="bg-gray-50 dark:bg-zinc-900 rounded-2xl p-6 border border-gray-100 dark:border-gray-800">
-              <Phone className="w-6 h-6 mx-auto mb-3 text-blue-600" />
-              <p className="text-sm text-gray-500 mb-1">{language === 'sw' ? 'Simu' : 'Phone'}</p>
-              <a href={`tel:${PHONE_NUMBER}`} className="font-semibold text-blue-600 hover:underline">{PHONE_NUMBER}</a>
-            </div>
-            <div className="bg-gray-50 dark:bg-zinc-900 rounded-2xl p-6 border border-gray-100 dark:border-gray-800">
-              <MessageCircle className="w-6 h-6 mx-auto mb-3 text-green-600" />
-              <p className="text-sm text-gray-500 mb-1">WhatsApp</p>
-              <a href={`https://wa.me/${WHATSAPP_NUMBER}`} target="_blank" rel="noopener noreferrer" className="font-semibold text-green-600 hover:underline">{t.whatsapp}</a>
-            </div>
-            <div className="bg-gray-50 dark:bg-zinc-900 rounded-2xl p-6 border border-gray-100 dark:border-gray-800">
-              <MapPin className="w-6 h-6 mx-auto mb-3 text-red-500" />
-              <p className="text-sm text-gray-500 mb-1">{language === 'sw' ? 'Mahali' : 'Location'}</p>
-              <p className="font-semibold">{BUSINESS_LOCATION}</p>
-            </div>
-          </div>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <a
-              href={`tel:${PHONE_NUMBER}`}
-              className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-full bg-blue-600 text-white font-medium hover:bg-blue-700 transition-colors"
-            >
-              <Phone className="w-5 h-5" /> {t.callNow}
-            </a>
-            <a
-              href={`https://wa.me/${WHATSAPP_NUMBER}`}
-              target="_blank" rel="noopener noreferrer"
-              className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-full bg-green-600 text-white font-medium hover:bg-green-700 transition-colors"
-            >
-              <MessageSquare className="w-5 h-5" /> {t.whatsapp}
-            </a>
-          </div>
-        </div>
-      </motion.section>
-
-      {/* History Lookup */}
-      <motion.section
-        id="history"
-        initial={{ opacity: 0, y: 20 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true }}
-        transition={{ duration: 0.5 }}
-        className="py-20 bg-gray-50 dark:bg-zinc-900"
-      >
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-10">
-            <h2 className="font-display text-3xl font-bold mb-4">{t.searchHistory}</h2>
-            <p className="text-gray-600 dark:text-gray-400">{t.enterPhone}</p>
-          </div>
-          <form onSubmit={handleSearch} className="flex gap-4 mb-12">
-            <input
-              type="tel"
-              value={searchPhone}
-              onChange={e => setSearchPhone(e.target.value)}
-              placeholder={t.searchPlaceholder}
-              className="flex-1 px-6 py-4 rounded-full bg-white dark:bg-black border border-gray-200 dark:border-gray-800 focus:ring-2 focus:ring-blue-500 outline-none transition-all shadow-sm"
-            />
-            <button type="submit" className="px-8 py-4 rounded-full bg-black dark:bg-white text-white dark:text-black font-medium hover:bg-gray-800 dark:hover:bg-gray-200 transition-colors flex items-center gap-2">
-              <Search className="w-5 h-5" />
-              <span className="hidden sm:inline">{t.search}</span>
-            </button>
-          </form>
-          {history && history.length > 0 && (
-            <div className="space-y-4">
-              <div className="flex justify-end mb-4">
-                <button
-                  onClick={() => generateHistoryPDF(history, searchPhone)}
-                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-black dark:bg-white text-white dark:text-black text-sm font-medium hover:bg-gray-800 dark:hover:bg-gray-200 transition-colors"
-                >
-                  <Download className="w-4 h-4" />
-                  {language === 'sw' ? 'Pakua PDF' : 'Download PDF'}
-                </button>
-              </div>
-              {history.map((booking, idx) => {
-                const service = SERVICES.find(s => s.id === booking.serviceType);
-                const serviceLabel = service ? (language === 'sw' ? service.titleSw : service.titleEn) : booking.serviceType;
-                return (
-                  <motion.div
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: idx * 0.1 }}
-                    key={booking.id}
-                    className="bg-white dark:bg-black p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4"
-                  >
-                    <div>
-                      <div className="flex items-center gap-3 mb-2">
-                        <span className="font-medium text-lg">{serviceLabel}</span>
-                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                          booking.status === 'Completed' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' :
-                          booking.status === 'In Progress' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400' :
-                          booking.status === 'Cancelled' ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400' :
-                          'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300'
-                        }`}>
-                          {t[booking.status.toLowerCase().replace(' ', '') as keyof typeof t] || booking.status}
-                        </span>
-                      </div>
-                      <div className="text-sm text-gray-500 dark:text-gray-400 font-mono">
-                        {booking.preferredDate} • {booking.carModel}
-                      </div>
-                    </div>
-                    {booking.isEmergency && (
-                      <div className="flex items-center gap-1 text-red-500 text-sm font-medium">
-                        <AlertTriangle className="w-4 h-4" /> {t.emergencyBadge}
-                      </div>
-                    )}
-                  </motion.div>
-                );
-              })}
-            </div>
-          )}
         </div>
       </motion.section>
 

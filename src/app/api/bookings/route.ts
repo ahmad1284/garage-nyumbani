@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
 
     const newBooking: Booking = {
       ...body,
-      id: crypto.randomUUID(),
+      id: `GN-${String(bookings.length + 1).padStart(6, '0')}`,
       status: 'New',
       createdAt: new Date().toISOString(),
     };
