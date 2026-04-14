@@ -157,7 +157,7 @@ export default function CustomerLanding() {
                 className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
                 aria-label="Theme selector"
               >
-                {theme === 'system' ? <Monitor className="w-5 h-5" /> : resolvedTheme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+                {theme === 'system' ? <Monitor className="w-5 h-5" /> : resolvedTheme === 'dark' ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
               </button>
               {themeDropdownOpen && (
                 <div className="absolute right-0 mt-2 w-36 bg-white dark:bg-zinc-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg py-1 z-50">
