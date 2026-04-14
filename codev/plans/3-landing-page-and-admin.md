@@ -7,14 +7,14 @@ Enhance landing page and admin dashboard across 8 phases: foundation fixes, foot
 ```json
 {
   "phases": [
-    {"id": "phase-1", "name": "Foundation Fixes", "status": "pending"},
-    {"id": "phase-2", "name": "Footer & FAB", "status": "pending"},
-    {"id": "phase-3", "name": "Search Bar & Marquee", "status": "pending"},
-    {"id": "phase-4", "name": "Service Cards & Animations", "status": "pending"},
-    {"id": "phase-5", "name": "History PDF", "status": "pending"},
-    {"id": "phase-6", "name": "Admin Search & Due Alerts", "status": "pending"},
-    {"id": "phase-7", "name": "Admin Extraction", "status": "pending"},
-    {"id": "phase-8", "name": "Admin PDF & Reminders", "status": "pending"}
+    {"id": "phase-1", "name": "Foundation Fixes", "status": "complete"},
+    {"id": "phase-2", "name": "Footer & FAB", "status": "complete"},
+    {"id": "phase-3", "name": "Search Bar & Marquee", "status": "complete"},
+    {"id": "phase-4", "name": "Service Cards & Animations", "status": "complete"},
+    {"id": "phase-5", "name": "History PDF", "status": "complete"},
+    {"id": "phase-6", "name": "Admin Search & Due Alerts", "status": "complete"},
+    {"id": "phase-7", "name": "Admin Extraction", "status": "complete"},
+    {"id": "phase-8", "name": "Admin PDF & Reminders", "status": "complete"}
   ]
 }
 ```
