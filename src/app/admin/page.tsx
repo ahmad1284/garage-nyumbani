@@ -6,9 +6,13 @@ import Link from 'next/link';
 import { storageService, Booking, BookingStatus, ServiceRecord, WhatsAppLog, setAdminToken, getAdminToken } from '@/lib/storage';
 import { MECHANICS, SERVICES } from '@/lib/constants';
 import { InvoiceDocument } from '@/components/invoice-document';
+import { NearingDueCard } from '@/app/admin/components/nearing-due-card';
+import { ReminderModal } from '@/app/admin/components/reminder-modal';
+import { generateServiceHistoryPDF } from '@/lib/admin-pdf-utils';
 import {
   LayoutDashboard, Users, FileText, MessageSquare, Download,
-  CheckCircle, Clock, XCircle, AlertCircle, Wrench, ChevronLeft, Calendar, Plus, Trash2
+  CheckCircle, Clock, XCircle, AlertCircle, Wrench, ChevronLeft, Calendar, Plus, Trash2,
+  Search
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { format, isBefore, addDays } from 'date-fns';
@@ -51,6 +55,11 @@ export default function AdminDashboard() {
   });
   const invoiceRef = useRef<HTMLDivElement>(null);
   const [invoiceBooking, setInvoiceBooking] = useState<Booking | null>(null);
+  const [bookingSearch, setBookingSearch] = useState('');
+  const [recordSearch, setRecordSearch] = useState('');
+  const [logSearch, setLogSearch] = useState('');
+  const [reminderModalOpen, setReminderModalOpen] = useState(false);
+  const [smsEnabled, setSmsEnabled] = useState(false);
 
   useEffect(() => {
     // Restore session from sessionStorage on mount
@@ -73,6 +82,11 @@ export default function AdminDashboard() {
       })
       .catch(() => toast.error('Failed to load data'))
       .finally(() => setIsLoading(false));
+
+    fetch('/api/reminders/sms-enabled')
+      .then(r => r.json())
+      .then(({ enabled }) => setSmsEnabled(!!enabled))
+      .catch(() => {});
   }, [isAuthenticated]);
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -283,6 +297,38 @@ export default function AdminDashboard() {
     );
   }
 
+  const nearingDue = records.filter(r =>
+    isBefore(new Date(r.nextServiceDate), addDays(new Date(), 14))
+  );
+
+  const filteredBookings = bookingSearch.trim()
+    ? bookings.filter(b => {
+        const q = bookingSearch.toLowerCase();
+        return b.customerName.toLowerCase().includes(q) ||
+               b.phone.includes(q) ||
+               b.carModel.toLowerCase().includes(q) ||
+               b.serviceType.toLowerCase().includes(q) ||
+               b.status.toLowerCase().includes(q);
+      })
+    : bookings;
+
+  const filteredRecords = recordSearch.trim()
+    ? records.filter(r => {
+        const q = recordSearch.toLowerCase();
+        return r.customerName.toLowerCase().includes(q) ||
+               r.phone.includes(q) ||
+               r.carModel.toLowerCase().includes(q) ||
+               r.serviceType.toLowerCase().includes(q);
+      })
+    : records;
+
+  const filteredLogs = logSearch.trim()
+    ? logs.filter(l => {
+        const q = logSearch.toLowerCase();
+        return l.phone.includes(q) || l.message.toLowerCase().includes(q);
+      })
+    : logs;
+
   const stats = {
     total: bookings.length,
     pending: bookings.filter(b => b.status === 'New').length,
@@ -368,6 +414,18 @@ export default function AdminDashboard() {
                   </div>
                 ))}
               </div>
+              <NearingDueCard nearingDue={nearingDue} />
+              {nearingDue.length > 0 && (
+                <div className="flex justify-end -mt-4 mb-8">
+                  <button
+                    onClick={() => setReminderModalOpen(true)}
+                    className="flex items-center gap-2 px-4 py-2 rounded-lg bg-orange-500 text-white text-sm font-medium hover:bg-orange-600 transition-colors"
+                  >
+                    <MessageSquare className="w-4 h-4" /> Send Reminders ({nearingDue.length})
+                  </button>
+                </div>
+              )}
+
               <h3 className="font-display text-xl font-bold mb-6">Recent Emergency Bookings</h3>
               <div className="bg-white dark:bg-black rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden">
                 <div className="divide-y divide-gray-100 dark:divide-gray-800">
@@ -395,7 +453,17 @@ export default function AdminDashboard() {
 
           {!isLoading && activeTab === 'bookings' && (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-              <h2 className="font-display text-3xl font-bold mb-8">Booking Management</h2>
+              <h2 className="font-display text-3xl font-bold mb-6">Booking Management</h2>
+              <div className="relative mb-6">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <input
+                  type="text"
+                  value={bookingSearch}
+                  onChange={e => setBookingSearch(e.target.value)}
+                  placeholder="Search by name, phone, car, service..."
+                  className="w-full pl-11 pr-4 py-3 rounded-xl bg-white dark:bg-black border border-gray-200 dark:border-gray-800 focus:ring-2 focus:ring-blue-500 outline-none text-sm"
+                />
+              </div>
               <div className="bg-white dark:bg-black rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden">
                 <div className="overflow-x-auto">
                   <table className="w-full text-left border-collapse">
@@ -409,7 +477,7 @@ export default function AdminDashboard() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-                      {bookings.map(b => (
+                      {filteredBookings.map(b => (
                         <tr key={b.id} className="hover:bg-gray-50 dark:hover:bg-zinc-900/50 transition-colors">
                           <td className="p-4">
                             <div className="font-mono text-sm">{b.id.toUpperCase()}</div>
@@ -455,10 +523,20 @@ export default function AdminDashboard() {
 
           {!isLoading && activeTab === 'logs' && (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-              <h2 className="font-display text-3xl font-bold mb-8">Communication Logs</h2>
+              <h2 className="font-display text-3xl font-bold mb-6">Communication Logs</h2>
+              <div className="relative mb-6">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <input
+                  type="text"
+                  value={logSearch}
+                  onChange={e => setLogSearch(e.target.value)}
+                  placeholder="Search by phone or message..."
+                  className="w-full pl-11 pr-4 py-3 rounded-xl bg-white dark:bg-black border border-gray-200 dark:border-gray-800 focus:ring-2 focus:ring-blue-500 outline-none text-sm"
+                />
+              </div>
               <div className="bg-white dark:bg-black rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm p-6">
                 <div className="space-y-6">
-                  {logs.map(log => (
+                  {filteredLogs.map(log => (
                     <div key={log.id} className="flex gap-4 p-4 bg-gray-50 dark:bg-zinc-900 rounded-xl">
                       <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-full h-fit">
                         <MessageSquare className="w-5 h-5 text-green-600 dark:text-green-400" />
@@ -484,15 +562,33 @@ export default function AdminDashboard() {
 
           {!isLoading && activeTab === 'reminders' && (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-              <div className="flex justify-between items-center mb-8">
+              <div className="flex justify-between items-center mb-6">
                 <h2 className="font-display text-3xl font-bold">Service Reminders</h2>
-                <button onClick={() => setIsManualRecordModalOpen(true)} className="px-4 py-2 bg-black dark:bg-white text-white dark:text-black rounded-lg font-medium hover:opacity-90 transition-opacity">
-                  + Add Record
-                </button>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => generateServiceHistoryPDF(records)}
+                    className="flex items-center gap-2 px-4 py-2 bg-black dark:bg-white text-white dark:text-black rounded-lg font-medium hover:opacity-90 transition-opacity text-sm"
+                  >
+                    <Download className="w-4 h-4" /> Download PDF
+                  </button>
+                  <button onClick={() => setIsManualRecordModalOpen(true)} className="px-4 py-2 bg-black dark:bg-white text-white dark:text-black rounded-lg font-medium hover:opacity-90 transition-opacity">
+                    + Add Record
+                  </button>
+                </div>
+              </div>
+              <div className="relative mb-6">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <input
+                  type="text"
+                  value={recordSearch}
+                  onChange={e => setRecordSearch(e.target.value)}
+                  placeholder="Search by name, phone, car, service..."
+                  className="w-full pl-11 pr-4 py-3 rounded-xl bg-white dark:bg-black border border-gray-200 dark:border-gray-800 focus:ring-2 focus:ring-blue-500 outline-none text-sm"
+                />
               </div>
               <div className="bg-white dark:bg-black rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm p-6">
                 <div className="space-y-4">
-                  {records.map(record => {
+                  {filteredRecords.map(record => {
                     const isDue = isBefore(new Date(record.nextServiceDate), new Date());
                     return (
                       <div key={record.id} className={`p-4 rounded-2xl border ${isDue ? 'bg-red-50 dark:bg-red-900/10 border-red-100 dark:border-red-900/30' : 'bg-gray-50 dark:bg-zinc-900 border-gray-100 dark:border-gray-800'}`}>
@@ -794,6 +890,20 @@ export default function AdminDashboard() {
             </form>
           </motion.div>
         </div>
+      )}
+
+      {reminderModalOpen && nearingDue.length > 0 && (
+        <ReminderModal
+          records={nearingDue}
+          smsEnabled={smsEnabled}
+          onClose={() => setReminderModalOpen(false)}
+          onReminderSent={async () => {
+            try {
+              const updatedLogs = await storageService.getLogs();
+              setLogs(updatedLogs);
+            } catch { /* best effort */ }
+          }}
+        />
       )}
     </div>
   );

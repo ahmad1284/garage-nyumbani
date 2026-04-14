@@ -1,0 +1,64 @@
+Let me read the plan and the actual implementation files to do my own review.Now let me check the spec and the previous phase-1 review feedback:I now have a complete picture. Let me provide my review.
+
+## Phase 2 Review: Footer + Call Now FAB
+
+### Phase Scope
+Per the plan rebuttals, Phase 2 was scoped down to **Footer + Call Now FAB** only (Search Bar + Marquee moved to Phase 3). This is what I'm reviewing.
+
+---
+
+### 1. Spec Adherence ✅
+
+**Footer (`src/components/footer.tsx`):**
+- Phone number as `tel:` link ✅
+- WhatsApp link with `wa.me` ✅
+- Business location displayed ✅
+- Facebook & Instagram social links with `target="_blank" rel="noopener noreferrer"` ✅
+- Opening hours (Mon-Sat + Sun/Holidays) ✅
+- Google Maps embed with `loading="lazy"` ✅
+- Copyright with dynamic year ✅
+- Responsive grid (1-col → 3-col) ✅
+
+**Call Now FAB (`src/components/call-now-fab.tsx`):**
+- Mobile-only via `sm:hidden` ✅
+- Fixed position bottom-right (`fixed bottom-6 right-6`) ✅
+- `tel:` link to phone number ✅
+- Pulse animation (`animate-ping`) ✅
+- `aria-label="Call Now"` ✅
+
+**Page integration (`src/app/page.tsx:565-566`):**
+- `<Footer />` and `<CallNowFAB />` placed at end of component tree ✅
+
+### 2. Code Quality ✅
+
+Both components are clean, focused, and well-extracted. Constants come from `@/lib/constants` — no hardcoded values. The three new constants (`FACEBOOK_URL`, `INSTAGRAM_URL`, `GOOGLE_MAPS_EMBED_URL`) are sensible additions.
+
+The Footer uses good semantic HTML (`<footer>` element), proper external link attributes, and a responsive grid layout. The FAB is minimal — 19 lines doing exactly one thing.
+
+### 3. Test Coverage ✅
+
+**Footer tests (8 tests):** Phone link, WhatsApp link, business location, Facebook, Instagram, Google Maps iframe with lazy loading, opening hours, copyright year. Thorough.
+
+**CallNowFAB tests (3 tests):** `tel:` link, `sm:hidden` class, fixed positioning. Covers the essentials.
+
+**Page tests:** Updated describe block name; existing tests continue to pass with the new components in the tree.
+
+### 4. Minor Observations (non-blocking)
+
+1. **`"use client"` on Footer:** The only dynamic bit is `new Date().getFullYear()`. This could be a server component, but it's trivial and the directive doesn't hurt. Not worth changing.
+
+2. **`prefers-reduced-motion`:** The `animate-ping` on the FAB is subtle (`opacity-30`), but users with motion sensitivity might still notice it. A `motion-reduce:animate-none` Tailwind class would be a one-line improvement. Consider for a future pass.
+
+3. **Placeholder values:** Phone number `+255700000000` and social URLs are placeholders. Fine for development — these should be real before production.
+
+---
+
+```
+---
+VERDICT: APPROVE
+SUMMARY: Footer and Call Now FAB fully implemented with proper extraction, constants, accessibility, and comprehensive test coverage.
+CONFIDENCE: HIGH
+---
+KEY_ISSUES:
+- None
+```

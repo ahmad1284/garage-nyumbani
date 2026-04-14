@@ -1,0 +1,58 @@
+## Phase 5 Review: History PDF
+
+### Phase Scope
+Create `src/lib/pdf-utils.ts` with `generateHistoryPDF(bookings, phone)`. Add "Download PDF" button to history results in `page.tsx`.
+
+---
+
+### 1. Spec Adherence ✅
+
+**`pdf-utils.ts`:**
+- A4 document via jsPDF ✅
+- Header: business name, phone, generated date ✅
+- Table rows: Booking ID, Date, Service, Car, Status, Emergency flag ✅
+- Page number footer on every page ✅
+- Saves as `History_{phone}.pdf` ✅
+- Alternating row shading for readability ✅
+- Long strings truncated to fit columns ✅
+
+**`page.tsx`:**
+- `generateHistoryPDF` imported from `@/lib/pdf-utils` ✅
+- "Download PDF" / "Pakua PDF" button rendered when `history.length > 0` ✅
+- Button absent when history is null or empty ✅
+- Button uses `Download` lucide icon ✅
+
+### 2. Code Quality ✅
+
+Clean utility extraction. All logic in `pdf-utils.ts` — `page.tsx` just calls `generateHistoryPDF(history, searchPhone)`. Bilingual button label uses `language` state. Column positions as array (`colX`) — easy to adjust. `addPage()` guard prevents overflow at y > 270.
+
+### 3. Test Coverage ✅
+
+**history-pdf.test.tsx (7 tests):**
+- Button hidden when no history ✅
+- Button appears after search with results (async) ✅
+- Button not shown when empty results ✅
+- `save()` called with correct filename ✅
+- Business name written in header ✅
+- `setPage()` called per page ✅
+- Empty bookings handled without error ✅
+
+93/93 total tests pass ✅
+
+### 4. Minor Observations (non-blocking)
+
+1. **`storageService` mock in test**: The test file mocks `@/lib/storage` per-file. This is correct — each test file is isolated.
+
+2. **Long service titles**: `titleEn.substring(0, 22)` truncation is pragmatic for PDF column widths. Could use Swahili title per language preference but spec doesn't mandate it.
+
+---
+
+```
+---
+VERDICT: APPROVE
+SUMMARY: History PDF utility and download button fully implemented with correct filename, header, table rows, page footers, and 7 dedicated tests.
+CONFIDENCE: HIGH
+---
+KEY_ISSUES:
+- None
+```

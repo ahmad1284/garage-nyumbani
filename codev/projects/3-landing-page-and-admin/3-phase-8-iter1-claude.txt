@@ -1,0 +1,62 @@
+## Phase 8 Review: Admin PDF & Reminders
+
+### Phase Scope
+Wire `generateServiceHistoryPDF` to Download PDF button in reminders tab. Wire `<ReminderModal>` to "Send Reminders" button on dashboard. Create `GET /api/reminders/sms-enabled` and `POST /api/reminders/send`. SMS button in modal hidden/shown based on AT key.
+
+---
+
+### 1. Spec Adherence ✅
+
+**`GET /api/reminders/sms-enabled`:**
+- Returns `{ enabled: !!process.env.AT_API_KEY }` ✅
+- No key exposed to client ✅
+
+**`POST /api/reminders/send`:**
+- Admin token auth required ✅
+- Loops Africa's Talking SMS API per target ✅
+- AT_API_KEY + AT_USERNAME (defaults to 'sandbox') ✅
+- Logs each as `WhatsAppLog` with `type: 'reminder'` ✅
+- Returns 503 when AT_API_KEY not set ✅
+
+**`admin/page.tsx`:**
+- `smsEnabled` state + `/api/reminders/sms-enabled` fetch on auth ✅
+- "Download PDF" button in reminders tab → `generateServiceHistoryPDF(records)` ✅
+- "Send Reminders (N)" button on dashboard when `nearingDue.length > 0` → opens `ReminderModal` ✅
+- `smsEnabled` passed to `<ReminderModal>` ✅
+- `onReminderSent` refreshes logs via `storageService.getLogs()` ✅
+
+**`ReminderModal` updates:**
+- `smsEnabled?: boolean` prop added ✅
+- SMS button visible only when `smsEnabled=true` ✅
+- SMS batch button calls `POST /api/reminders/send` with all targets ✅
+
+**`WhatsAppLog`:**
+- `type?: string` optional field added ✅ (backwards compatible)
+
+### 2. Code Quality ✅
+
+Route pattern consistent with existing API routes. `AT_USERNAME` defaults to `'sandbox'` — correct for AT testing. `fetch` error per-target caught individually — partial success allowed. All new state properly initialized.
+
+### 3. Test Coverage ✅
+
+**admin-pdf-reminders.test.tsx (6 tests):**
+- SMS button hidden when `smsEnabled=false` ✅
+- SMS button visible when `smsEnabled=true` ✅
+- SMS button calls `/api/reminders/send` ✅
+- Download PDF button renders in reminders tab ✅
+- Click Download PDF → `save('Service_Records.pdf')` ✅
+- Admin fetches `/api/reminders/sms-enabled` on login ✅
+
+119/119 total tests pass ✅
+
+---
+
+```
+---
+VERDICT: APPROVE
+SUMMARY: PDF download, reminder modal wiring, sms-enabled API, and AT SMS send route all implemented with correct auth, graceful degradation, and full test coverage.
+CONFIDENCE: HIGH
+---
+KEY_ISSUES:
+- None
+```

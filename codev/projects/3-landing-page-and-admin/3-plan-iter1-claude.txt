@@ -1,0 +1,90 @@
+Let me verify the plan's assumptions against the actual codebase.Good. Now I have everything I need. Here's my review:
+
+---
+
+## Plan Review: 3-landing-page-and-admin
+
+### 1. Spec Coverage ✅
+
+All 13 spec requirements map to plan phases:
+
+| Spec Item | Plan Phase |
+|-----------|-----------|
+| Theme toggle fix | Phase 1 |
+| Swahili default | Phase 1 |
+| Footer | Phase 2 |
+| Call Now FAB | Phase 2 |
+| Search bar | Phase 2 |
+| Hero marquee | Phase 2 |
+| Service card images | Phase 3 |
+| Framer Motion animations | Phase 3 |
+| History PDF | Phase 4 |
+| Admin search/filter | Phase 5 |
+| Nearing-due alerts | Phase 5 |
+| Admin PDF download | Phase 6 |
+| Automated reminders | Phase 6 |
+
+No spec requirements are missed. No phases exceed spec scope.
+
+### 2. Phase Breakdown & Ordering
+
+**Strengths:**
+- Phase 1 is small and foundational — good starting point.
+- Phase 5 is correctly marked as independent of landing page phases.
+- Phase 4 only depends on Phase 1, so it *could* run in parallel with Phases 2-3 — the plan implicitly allows this.
+
+**Issues:**
+
+- **Phase 2 is overloaded.** It introduces 4 distinct features (footer, FAB, search bar, marquee) plus new constants. This is the heaviest phase — a builder will be touching `page.tsx` extensively, creating 2 new components, and modifying constants. Consider splitting: footer+FAB in one phase, search bar+marquee in another. This would also make commits more reviewable.
+
+- **Phase 3 depends on Phase 2, but doesn't need to.** Service card images and Framer Motion animations don't depend on the footer, FAB, or search bar. Phase 3 could depend only on Phase 1. The artificial dependency chain (1→2→3) serializes work unnecessarily.
+
+### 3. Technical Approach
+
+**Verified correct:**
+- `theme` → `resolvedTheme` fix: confirmed `page.tsx` line 23 uses `const { theme, setTheme } = useTheme()`.
+- Language provider: confirmed `useState<Language>('en')` at line 183 — plan's fix target is accurate.
+- `jsPDF` already installed — no new dependency needed for PDF phases.
+- `images.unsplash.com` already in `next.config.ts` `remotePatterns` — the plan's risk note about "easy to miss" is already handled. Good that it's called out, but the builder should know it's already done.
+- `motion` package (not `framer-motion`) is what's actually installed and imported — the plan says "Framer Motion" which is the library brand name but the import is `motion/react`. Not a blocker, but the builder should be aware.
+
+**Concerns:**
+
+- **`page.tsx` bloat is real but plan's mitigation is weak.** The file is 564 lines. Phases 2-4 all add significant content to this file. The plan mentions extracting `<Footer>` and `<CallNowFAB>` as separate component files (good — Phase 2 already lists them), but the search bar, marquee, history PDF function, service card image rendering, and Framer Motion wrappers all land in `page.tsx`. After all phases, this file could approach 800+ lines. The plan should explicitly call out extracting `generateHistoryPDF` into a utility file (e.g., `src/lib/pdf-utils.ts`) and potentially the search bar as a component.
+
+- **`admin/page.tsx` is already 800 lines** and Phases 5-6 add search state, nearing-due card, PDF generation, reminder modal, and WhatsApp flow — all into one file. The plan doesn't mention any extraction strategy for admin. This is a bigger concern than landing page bloat.
+
+- **Phase 6 API route**: The plan mentions `POST /api/reminders/send` and lists `src/app/api/reminders/send/route.ts` as a new file. This is good. However, the plan doesn't mention how the frontend detects whether `AT_API_KEY` is set. Env vars prefixed with `NEXT_PUBLIC_` are needed for client-side access, but exposing the key itself is wrong. The route should expose an endpoint (or the page should call an API) to check if SMS is enabled. This detail is missing.
+
+### 4. Testing Strategy
+
+Each phase has Playwright MCP test criteria — good. The tests are practical and verifiable.
+
+**Gap:** Phase 6's SMS/reminder tests only check DOM state ("assert SMS button absent when `AT_API_KEY` not set"). But since the API key detection mechanism isn't specified in the plan, a builder won't know how to implement or test this correctly.
+
+### 5. Risk Assessment
+
+The plan identifies 4 risks — all valid. The Unsplash fallback and Africa's Talking graceful degradation are well-handled.
+
+**Missing risk:** The plan doesn't mention that the `motion` package import path (`motion/react`) differs from many online Framer Motion examples (`framer-motion`). A builder copying examples could introduce wrong imports.
+
+### 6. Summary of Key Issues
+
+1. **Phase 2 is too large** — 4 features in one phase makes it hard to commit/review incrementally.
+2. **No extraction strategy for `admin/page.tsx`** (800 lines, about to grow significantly).
+3. **Missing mechanism for client-side AT_API_KEY detection** — how does the frontend know SMS is available?
+4. **`next.config.ts` already has Unsplash pattern** — plan should note this is already done to avoid confusion.
+
+---
+
+---
+VERDICT: COMMENT
+SUMMARY: Solid spec coverage and sequencing; Phase 2 is overloaded and admin file bloat needs an extraction strategy
+CONFIDENCE: HIGH
+---
+
+KEY_ISSUES:
+- Phase 2 bundles 4 distinct features (footer, FAB, search bar, marquee) — should be split for reviewability
+- No extraction strategy for `admin/page.tsx` (already 800 lines, Phases 5-6 add ~200+ more)
+- Missing detail on how frontend detects `AT_API_KEY` availability without exposing the secret client-side
+- Minor: `next.config.ts` already has Unsplash remote pattern — plan should note this to avoid redundant work

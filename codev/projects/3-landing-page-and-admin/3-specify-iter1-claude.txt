@@ -1,0 +1,72 @@
+Let me verify some key claims against the actual codebase before reviewing.Now I have a solid understanding of both the spec and the actual codebase. Here's my review:
+
+---
+
+## Specification Review: 3-Landing Page & Admin Enhancements
+
+### 1. Completeness
+
+**Good:**
+- Problem statements are well-enumerated and verified against actual code (e.g., the `theme` vs `resolvedTheme` bug on line 23/141-144 of `page.tsx` is real and correctly identified)
+- Success criteria are clearly defined and testable (table with 13 items)
+- In/Out of scope is well-bounded
+- Consultation log shows iteration and good decision-making
+
+**Issues:**
+
+- **Privacy concern with history lookup is unaddressed.** The spec explicitly says "No verification gate" — anyone can enter any phone number and download a full PDF of someone else's booking history. The consultation log shows OTP was removed by user decision. The spec should at minimum *acknowledge* this as a known trade-off and document the rationale (e.g., "bookings contain no sensitive financial data" or "acceptable for MVP"). Right now the spec is silent on it, which could cause a builder or reviewer to flag it later.
+
+- **Africa's Talking credentials.** The spec mentions this in the consultation log as a "hard blocker" but the main body doesn't clearly state whether Africa's Talking integration is a hard requirement or a graceful degradation. The automated reminders section (line 157) says "optionally trigger Africa's Talking SMS batch" — what does "optionally" mean here? Is it optional for the admin, or optional for the implementation? If AT credentials aren't configured, should the SMS button be hidden, disabled, or show an error? This needs clarity.
+
+- **No `ServiceRecord` tab in admin sidebar.** The current admin sidebar (line 315-324) has: Dashboard, Bookings, Reminders, Logs. The spec says "Search bar at top of each tab (Bookings, Records, Logs)" — but there's no dedicated "Records" tab currently. The "Reminders" tab already shows records. The spec should clarify: is a new "Records" tab being added, or does "Records" refer to the existing "Reminders" tab?
+
+- **Unsplash image licensing.** The spec proposes using Unsplash URLs directly in constants. For a production app, hotlinking to Unsplash is fine per their ToS, but the spec doesn't mention attribution requirements. Worth noting since the fallback handling is already covered.
+
+### 2. Correctness
+
+**Verified claims:**
+- ✅ `useTheme()` returns `theme` (not `resolvedTheme`) on line 23 — bug is real
+- ✅ Language provider defaults to `'en'` on line 183 — change to `'sw'` is accurate
+- ✅ `ServiceItem` interface in `constants.ts` has no `imageUrl` field — addition is correct
+- ✅ `jspdf` is already installed (package.json line 23) — no new dependency needed for PDF
+- ✅ `motion` package is already installed (line 26) — Framer Motion claims are accurate
+- ✅ `date-fns` with `isBefore`/`addDays` already imported in admin (line 14) — nearing-due logic is feasible
+- ✅ No footer component exists — confirmed by reading page.tsx to end
+
+**Minor correction:** The spec says "Framer Motion is already installed but underused" (line 19). Looking at `page.tsx`, motion is actually used quite extensively — hero animation (line 166), service card `whileInView` (line 197-202), history results animation (line 486), and modals (line 525). The spec slightly overstates the gap. The real work is adding `whileInView` to *section-level* wrappers and the marquee, not introducing motion from scratch.
+
+### 3. Feasibility
+
+**No blockers.** Everything proposed uses existing dependencies or CSS-only techniques. Key observations:
+
+- The `page.tsx` is already 564 lines. This spec adds: footer, FAB, search bar, marquee, history PDF generation, service card images, additional motion wrappers. The implementation plan should consider extracting components to keep the file manageable — but that's a plan-phase concern, not a spec issue.
+
+- **SMS batch sending** via Africa's Talking API requires a server-side endpoint (`POST /api/reminders/send`). This is feasible with Next.js API routes but the spec should note this is a new API route (not just client-side work).
+
+### 4. Clarity
+
+**Good:** The technical design section gives concrete code snippets and component paths. A builder could pick this up and know exactly what to build.
+
+**Ambiguity:**
+- **"Search bar after hero"** — does this filter the SERVICES array and show/hide cards, or does it scroll to matching cards? The spec says both: "filters SERVICES list client-side by title/description, scrolls to filtered service card." These are different UX patterns. Filtering (showing only matches) is cleaner. Clarify which one.
+
+- **Marquee implementation** — the spec offers two approaches (CSS-only vs Framer Motion) without committing to one. This is fine for a spec if the builder has discretion, but if you want consistency, pick one.
+
+### 5. Scope Concern
+
+This is a large spec — 13 distinct features across two pages. The consultation log notes this was a deliberate decision. The risk is that testing becomes unwieldy: 13 success criteria across landing and admin, with PDF generation, SMS integration, and animation work. The plan phase should break this into clear implementation phases with intermediate checkpoints.
+
+---
+
+```
+---
+VERDICT: COMMENT
+SUMMARY: Solid, well-researched spec with a few ambiguities around SMS fallback behavior, Records tab naming, and search bar UX that should be clarified before build.
+CONFIDENCE: HIGH
+---
+KEY_ISSUES:
+- Africa's Talking SMS: Clarify behavior when credentials are missing (hide button? show error? skip feature?) — current "optionally" is ambiguous
+- "Records" tab vs "Reminders" tab: Spec references a "Records" tab that doesn't exist in the current sidebar — clarify if this is a rename or new tab
+- Search bar UX: "filters SERVICES list" vs "scrolls to filtered service card" are two different patterns — pick one
+- Privacy trade-off for phone-based history lookup should be explicitly documented as an accepted risk, not just buried in the consultation log
+```

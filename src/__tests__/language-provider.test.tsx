@@ -38,13 +38,13 @@ describe('LanguageProvider', () => {
     expect(screen.getByTestId('hero-title').textContent).toBeTruthy();
   });
 
-  test('defaults to English', () => {
+  test('defaults to Swahili', () => {
     render(
       <LanguageProvider>
         <TestConsumer />
       </LanguageProvider>
     );
-    expect(screen.getByTestId('language').textContent).toBe('en');
+    expect(screen.getByTestId('language').textContent).toBe('sw');
   });
 
   test('restores saved language from localStorage', async () => {
@@ -59,12 +59,14 @@ describe('LanguageProvider', () => {
     expect(screen.getByTestId('language').textContent).toBe('sw');
   });
 
-  test('English translations include all required UI_STRINGS keys', () => {
+  test('English translations include all required UI_STRINGS keys', async () => {
+    localStorageMock.setItem('garage_lang', 'en');
     render(
       <LanguageProvider>
         <TestConsumer />
       </LanguageProvider>
     );
+    await act(async () => {});
     expect(screen.getByTestId('faq-title').textContent).toBe('FREQUENTLY ASKED QUESTIONS');
   });
 

@@ -1,14 +1,16 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useLanguage } from '@/components/language-provider';
 import { useTheme } from 'next-themes';
+import { Footer } from '@/components/footer';
+import { CallNowFAB } from '@/components/call-now-fab';
 import {
   Wrench, AlertTriangle, Search, Calendar, MapPin, Phone, User, Car, Clock,
-  Moon, Sun, Globe, ChevronRight, Sparkles, CheckCircle, XCircle, Download,
+  Moon, Sun, Monitor, Globe, ChevronRight, Sparkles, CheckCircle, XCircle, Download,
   MessageSquare, ChevronDown, MessageCircle
 } from 'lucide-react';
 import { storageService, Booking } from '@/lib/storage';
@@ -17,10 +19,23 @@ import { toast } from 'sonner';
 import { analyzeCarIssue } from './actions';
 import jsPDF from 'jspdf';
 import { format } from 'date-fns';
+import { generateHistoryPDF } from '@/lib/pdf-utils';
 
 export default function CustomerLanding() {
   const { t, language, setLanguage } = useLanguage();
-  const { theme, setTheme } = useTheme();
+  const { theme, resolvedTheme, setTheme } = useTheme();
+  const [themeDropdownOpen, setThemeDropdownOpen] = useState(false);
+  const themeDropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (themeDropdownRef.current && !themeDropdownRef.current.contains(e.target as Node)) {
+        setThemeDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
 
   const [formData, setFormData] = useState({
     customerName: '',
@@ -43,7 +58,6 @@ export default function CustomerLanding() {
   const [confirmedBooking, setConfirmedBooking] = useState<Booking | null>(null);
   const [expandedService, setExpandedService] = useState<string | null>(null);
   const [expandedFaq, setExpandedFaq] = useState<number | null>(null);
-
   const handleAiAnalyze = async () => {
     if (!formData.otherDescription) return;
     setIsAiThinking(true);
@@ -137,12 +151,32 @@ export default function CustomerLanding() {
               <Globe className="w-4 h-4" />
               {language.toUpperCase()}
             </button>
-            <button
-              onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-              className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-            >
-              {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
-            </button>
+            <div ref={themeDropdownRef} className="relative">
+              <button
+                onClick={() => setThemeDropdownOpen(o => !o)}
+                className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                aria-label="Theme selector"
+              >
+                {theme === 'system' ? <Monitor className="w-5 h-5" /> : resolvedTheme === 'dark' ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
+              </button>
+              {themeDropdownOpen && (
+                <div className="absolute right-0 mt-2 w-36 bg-white dark:bg-zinc-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg py-1 z-50">
+                  {([
+                    { value: 'light', label: 'Light', Icon: Sun },
+                    { value: 'dark',  label: 'Dark',  Icon: Moon },
+                    { value: 'system',label: 'System',Icon: Monitor },
+                  ] as const).map(({ value, label, Icon }) => (
+                    <button
+                      key={value}
+                      onClick={() => { setTheme(value); setThemeDropdownOpen(false); }}
+                      className={`w-full flex items-center gap-3 px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors ${theme === value ? 'font-semibold text-blue-600 dark:text-blue-400' : ''}`}
+                    >
+                      <Icon className="w-4 h-4" /> {label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
             <Link href="/admin" className="hidden sm:flex items-center gap-2 text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400">
               {t.adminLogin} <ChevronRight className="w-4 h-4" />
             </Link>
@@ -181,12 +215,107 @@ export default function CustomerLanding() {
                 {t.searchHistory}
               </a>
             </div>
+
           </motion.div>
+        </div>
+        {/* Marquee - full width */}
+        <div className="relative z-10 mt-8 overflow-hidden bg-white/10 backdrop-blur-sm py-2">
+          <div className="marquee-track text-white/80 text-sm font-medium" aria-label="24/7 Service ticker">
+            {[...Array(4)].map((_, i) => (
+              <span key={i} className="px-6 whitespace-nowrap">
+                24/7 Service &nbsp;•&nbsp; Zanzibar Nzima &nbsp;•&nbsp; Huduma ya Dharura &nbsp;•&nbsp; Mobile Garage &nbsp;•&nbsp;
+              </span>
+            ))}
+          </div>
         </div>
       </section>
 
+      {/* History Lookup */}
+      <motion.section
+        id="history"
+        initial={{ opacity: 0, y: 20 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        transition={{ duration: 0.5 }}
+        className="py-20 bg-gray-50 dark:bg-zinc-900"
+      >
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-10">
+            <h2 className="font-display text-3xl font-bold mb-4">{t.searchHistory}</h2>
+            <p className="text-gray-600 dark:text-gray-400">{t.enterPhone}</p>
+          </div>
+          <form onSubmit={handleSearch} className="flex gap-4 mb-12">
+            <input
+              type="tel"
+              value={searchPhone}
+              onChange={e => setSearchPhone(e.target.value)}
+              placeholder={t.searchPlaceholder}
+              className="flex-1 px-6 py-4 rounded-full bg-white dark:bg-black border border-gray-200 dark:border-gray-800 focus:ring-2 focus:ring-blue-500 outline-none transition-all shadow-sm"
+            />
+            <button type="submit" className="px-8 py-4 rounded-full bg-black dark:bg-white text-white dark:text-black font-medium hover:bg-gray-800 dark:hover:bg-gray-200 transition-colors flex items-center gap-2">
+              <Search className="w-5 h-5" />
+              <span className="hidden sm:inline">{t.search}</span>
+            </button>
+          </form>
+          {history && history.length > 0 && (
+            <div className="space-y-4">
+              <div className="flex justify-end mb-4">
+                <button
+                  onClick={() => generateHistoryPDF(history, searchPhone)}
+                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-black dark:bg-white text-white dark:text-black text-sm font-medium hover:bg-gray-800 dark:hover:bg-gray-200 transition-colors"
+                >
+                  <Download className="w-4 h-4" />
+                  {language === 'sw' ? 'Pakua PDF' : 'Download PDF'}
+                </button>
+              </div>
+              {history.map((booking, idx) => {
+                const service = SERVICES.find(s => s.id === booking.serviceType);
+                const serviceLabel = service ? (language === 'sw' ? service.titleSw : service.titleEn) : booking.serviceType;
+                return (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: idx * 0.1 }}
+                    key={booking.id}
+                    className="bg-white dark:bg-black p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4"
+                  >
+                    <div>
+                      <div className="flex items-center gap-3 mb-2">
+                        <span className="font-medium text-lg">{serviceLabel}</span>
+                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                          booking.status === 'Completed' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' :
+                          booking.status === 'In Progress' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400' :
+                          booking.status === 'Cancelled' ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400' :
+                          'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300'
+                        }`}>
+                          {t[booking.status.toLowerCase().replace(' ', '') as keyof typeof t] || booking.status}
+                        </span>
+                      </div>
+                      <div className="text-sm text-gray-500 dark:text-gray-400 font-mono">
+                        {booking.preferredDate} • {booking.carModel}
+                      </div>
+                    </div>
+                    {booking.isEmergency && (
+                      <div className="flex items-center gap-1 text-red-500 text-sm font-medium">
+                        <AlertTriangle className="w-4 h-4" /> {t.emergencyBadge}
+                      </div>
+                    )}
+                  </motion.div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </motion.section>
+
       {/* Service Catalog */}
-      <section className="py-20 bg-gray-50 dark:bg-zinc-900">
+      <motion.section
+        initial={{ opacity: 0, y: 20 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        transition={{ duration: 0.5 }}
+        className="py-20 bg-gray-50 dark:bg-zinc-900"
+      >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <h2 className="font-display text-3xl font-bold mb-4 text-center">{t.servicesTitle}</h2>
           <p className="text-center text-gray-500 dark:text-gray-400 mb-12 text-sm">{t.noteDistance}</p>
@@ -202,11 +331,24 @@ export default function CustomerLanding() {
                   transition={{ delay: idx * 0.05 }}
                   className="bg-white dark:bg-black rounded-3xl shadow-sm border border-gray-100 dark:border-gray-800 overflow-hidden"
                 >
+                  {/* Card image header */}
+                  <div
+                    className="relative h-40 overflow-hidden"
+                    style={{ background: service.fallbackBg }}
+                  >
+                    <Image
+                      src={service.imageUrl}
+                      alt={service.titleEn}
+                      fill
+                      className="object-cover"
+                      referrerPolicy="no-referrer"
+                    />
+                    <div className="absolute inset-0 bg-black/30" />
+                  </div>
                   <button
                     onClick={() => setExpandedService(isExpanded ? null : service.id)}
                     className="w-full p-6 flex items-start gap-4 text-left hover:bg-gray-50 dark:hover:bg-zinc-900 transition-colors"
                   >
-                    <span className="text-3xl flex-shrink-0">{service.icon}</span>
                     <div className="flex-1 min-w-0">
                       <h3 className="font-semibold text-sm leading-tight mb-1">
                         {language === 'sw' ? service.titleSw : service.titleEn}
@@ -250,7 +392,7 @@ export default function CustomerLanding() {
             })}
           </div>
         </div>
-      </section>
+      </motion.section>
 
       {/* Booking Form */}
       <section id="book" className="py-20">
@@ -287,7 +429,7 @@ export default function CustomerLanding() {
                     <select value={formData.serviceType} onChange={e => setFormData({...formData, serviceType: e.target.value})} className="w-full px-4 py-3 rounded-xl bg-gray-50 dark:bg-black border border-gray-200 dark:border-gray-800 focus:ring-2 focus:ring-blue-500 outline-none transition-all appearance-none">
                       {SERVICES.map(s => (
                         <option key={s.id} value={s.id}>
-                          {s.icon} {language === 'sw' ? s.titleSw : s.titleEn}
+                          {language === 'sw' ? s.titleSw : s.titleEn}
                         </option>
                       ))}
                     </select>
@@ -376,7 +518,13 @@ export default function CustomerLanding() {
       </section>
 
       {/* FAQ Section */}
-      <section className="py-20 bg-gray-50 dark:bg-zinc-900">
+      <motion.section
+        initial={{ opacity: 0, y: 20 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        transition={{ duration: 0.5 }}
+        className="py-20 bg-gray-50 dark:bg-zinc-900"
+      >
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
           <h2 className="font-display text-3xl font-bold mb-12 text-center">{t.faqTitle}</h2>
           <div className="space-y-4">
@@ -415,109 +563,7 @@ export default function CustomerLanding() {
             })}
           </div>
         </div>
-      </section>
-
-      {/* Contact / Business Info Section */}
-      <section className="py-20">
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="font-display text-3xl font-bold mb-4">{t.contactUs}</h2>
-          <p className="text-gray-500 dark:text-gray-400 mb-12">{t.workingHours}</p>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-10">
-            <div className="bg-gray-50 dark:bg-zinc-900 rounded-2xl p-6 border border-gray-100 dark:border-gray-800">
-              <Phone className="w-6 h-6 mx-auto mb-3 text-blue-600" />
-              <p className="text-sm text-gray-500 mb-1">{language === 'sw' ? 'Simu' : 'Phone'}</p>
-              <a href={`tel:${PHONE_NUMBER}`} className="font-semibold text-blue-600 hover:underline">{PHONE_NUMBER}</a>
-            </div>
-            <div className="bg-gray-50 dark:bg-zinc-900 rounded-2xl p-6 border border-gray-100 dark:border-gray-800">
-              <MessageCircle className="w-6 h-6 mx-auto mb-3 text-green-600" />
-              <p className="text-sm text-gray-500 mb-1">WhatsApp</p>
-              <a href={`https://wa.me/${WHATSAPP_NUMBER}`} target="_blank" rel="noopener noreferrer" className="font-semibold text-green-600 hover:underline">{t.whatsapp}</a>
-            </div>
-            <div className="bg-gray-50 dark:bg-zinc-900 rounded-2xl p-6 border border-gray-100 dark:border-gray-800">
-              <MapPin className="w-6 h-6 mx-auto mb-3 text-red-500" />
-              <p className="text-sm text-gray-500 mb-1">{language === 'sw' ? 'Mahali' : 'Location'}</p>
-              <p className="font-semibold">{BUSINESS_LOCATION}</p>
-            </div>
-          </div>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <a
-              href={`tel:${PHONE_NUMBER}`}
-              className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-full bg-blue-600 text-white font-medium hover:bg-blue-700 transition-colors"
-            >
-              <Phone className="w-5 h-5" /> {t.callNow}
-            </a>
-            <a
-              href={`https://wa.me/${WHATSAPP_NUMBER}`}
-              target="_blank" rel="noopener noreferrer"
-              className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-full bg-green-600 text-white font-medium hover:bg-green-700 transition-colors"
-            >
-              <MessageSquare className="w-5 h-5" /> {t.whatsapp}
-            </a>
-          </div>
-        </div>
-      </section>
-
-      {/* History Lookup */}
-      <section id="history" className="py-20 bg-gray-50 dark:bg-zinc-900">
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-10">
-            <h2 className="font-display text-3xl font-bold mb-4">{t.searchHistory}</h2>
-            <p className="text-gray-600 dark:text-gray-400">{t.enterPhone}</p>
-          </div>
-          <form onSubmit={handleSearch} className="flex gap-4 mb-12">
-            <input
-              type="tel"
-              value={searchPhone}
-              onChange={e => setSearchPhone(e.target.value)}
-              placeholder={t.searchPlaceholder}
-              className="flex-1 px-6 py-4 rounded-full bg-white dark:bg-black border border-gray-200 dark:border-gray-800 focus:ring-2 focus:ring-blue-500 outline-none transition-all shadow-sm"
-            />
-            <button type="submit" className="px-8 py-4 rounded-full bg-black dark:bg-white text-white dark:text-black font-medium hover:bg-gray-800 dark:hover:bg-gray-200 transition-colors flex items-center gap-2">
-              <Search className="w-5 h-5" />
-              <span className="hidden sm:inline">{t.search}</span>
-            </button>
-          </form>
-          {history && history.length > 0 && (
-            <div className="space-y-4">
-              {history.map((booking, idx) => {
-                const service = SERVICES.find(s => s.id === booking.serviceType);
-                const serviceLabel = service ? (language === 'sw' ? service.titleSw : service.titleEn) : booking.serviceType;
-                return (
-                  <motion.div
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: idx * 0.1 }}
-                    key={booking.id}
-                    className="bg-white dark:bg-black p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4"
-                  >
-                    <div>
-                      <div className="flex items-center gap-3 mb-2">
-                        <span className="font-medium text-lg">{serviceLabel}</span>
-                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                          booking.status === 'Completed' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' :
-                          booking.status === 'In Progress' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400' :
-                          booking.status === 'Cancelled' ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400' :
-                          'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300'
-                        }`}>
-                          {t[booking.status.toLowerCase().replace(' ', '') as keyof typeof t] || booking.status}
-                        </span>
-                      </div>
-                      <div className="text-sm text-gray-500 dark:text-gray-400 font-mono">
-                        {booking.preferredDate} • {booking.carModel}
-                      </div>
-                    </div>
-                    {booking.isEmergency && (
-                      <div className="flex items-center gap-1 text-red-500 text-sm font-medium">
-                        <AlertTriangle className="w-4 h-4" /> {t.emergencyBadge}
-                      </div>
-                    )}
-                  </motion.div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      </section>
+      </motion.section>
 
       {/* Booking Confirmation Modal */}
       {confirmedBooking && (
@@ -559,6 +605,9 @@ export default function CustomerLanding() {
           </motion.div>
         </div>
       )}
+
+      <Footer />
+      <CallNowFAB />
     </div>
   );
 }
