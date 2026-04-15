@@ -8,8 +8,8 @@
 ```json
 {
   "phases": [
-    {"id": "phase-1", "name": "SVG Assets", "status": "pending"},
-    {"id": "phase-2", "name": "App Integration", "status": "pending"}
+    {"id": "phase-1", "name": "SVG Assets", "status": "complete"},
+    {"id": "phase-2", "name": "App Integration", "status": "complete"}
   ]
 }
 ```

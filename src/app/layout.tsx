@@ -23,6 +23,7 @@ const jetbrainsMono = JetBrains_Mono({
 export const metadata: Metadata = {
   title: 'Garage Nyumbani | Mobile Auto Service Zanzibar',
   description: 'Professional mobile car maintenance and repair in Zanzibar.',
+  icons: { icon: '/logo-mark-light.svg' },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

@@ -1,5 +1,6 @@
 "use client";
 
+import Image from 'next/image';
 import { Phone, MessageCircle, MapPin, Facebook, Instagram, Clock } from 'lucide-react';
 import { BUSINESS_NAME, PHONE_NUMBER, WHATSAPP_NUMBER, BUSINESS_LOCATION, FACEBOOK_URL, INSTAGRAM_URL, GOOGLE_MAPS_EMBED_URL } from '@/lib/constants';
 
@@ -12,7 +13,7 @@ export function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
           {/* Brand + Contact */}
           <div>
-            <h3 className="font-display font-bold text-xl mb-4">{BUSINESS_NAME}</h3>
+            <Image src="/logo-mark-dark.svg" alt="Garage Nyumbani" width={64} height={64} className="mb-4" />
             <p className="text-gray-400 text-sm mb-6">Mobile garage service across Zanzibar. We come to you.</p>
             <div className="space-y-3">
               <a href={`tel:${PHONE_NUMBER}`} className="flex items-center gap-3 text-sm text-gray-300 hover:text-white transition-colors">

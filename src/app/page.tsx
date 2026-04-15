@@ -9,7 +9,7 @@ import { useTheme } from 'next-themes';
 import { Footer } from '@/components/footer';
 import { CallNowFAB } from '@/components/call-now-fab';
 import {
-  Wrench, AlertTriangle, Search, Calendar, MapPin, Phone, User, Car, Clock,
+  AlertTriangle, Search, Calendar, MapPin, Phone, User, Car, Clock,
   Moon, Sun, Monitor, Globe, ChevronRight, Sparkles, CheckCircle, XCircle, Download,
   MessageSquare, ChevronDown, MessageCircle
 } from 'lucide-react';
@@ -139,9 +139,9 @@ export default function CustomerLanding() {
       {/* Navbar */}
       <nav className="fixed top-0 w-full z-50 bg-white/80 dark:bg-black/80 backdrop-blur-md border-b border-gray-200 dark:border-gray-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Wrench className="w-6 h-6 text-blue-600" />
-            <span className="font-display font-bold text-xl tracking-tight">{BUSINESS_NAME}</span>
+          <div className="flex items-center">
+            <Image src="/logo-full-light.svg" alt="Garage Nyumbani" width={160} height={44} priority className="dark:hidden" />
+            <Image src="/logo-full-dark.svg" alt="Garage Nyumbani" width={160} height={44} priority className="hidden dark:block" />
           </div>
           <div className="flex items-center gap-4">
             <button
