@@ -13,7 +13,7 @@ export function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
           {/* Brand + Contact */}
           <div>
-            <Image src="/logo-mark-dark.svg" alt="Garage Nyumbani" width={64} height={64} className="mb-4" />
+            <Image src="/logo-full-dark.svg" alt="Garage Nyumbani" width={180} height={88} className="mb-4" />
             <p className="text-gray-400 text-sm mb-6">Mobile garage service across Zanzibar. We come to you.</p>
             <div className="space-y-3">
               <a href={`tel:${PHONE_NUMBER}`} className="flex items-center gap-3 text-sm text-gray-300 hover:text-white transition-colors">
