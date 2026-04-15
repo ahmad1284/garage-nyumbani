@@ -9,9 +9,10 @@ import { InvoiceDocument } from '@/components/invoice-document';
 import { NearingDueCard } from '@/app/admin/components/nearing-due-card';
 import { ReminderModal } from '@/app/admin/components/reminder-modal';
 import { generateServiceHistoryPDF } from '@/lib/admin-pdf-utils';
+import Image from 'next/image';
 import {
   LayoutDashboard, Users, FileText, MessageSquare, Download,
-  CheckCircle, Clock, XCircle, AlertCircle, Wrench, ChevronLeft, Calendar, Plus, Trash2,
+  CheckCircle, Clock, XCircle, AlertCircle, ChevronLeft, Calendar, Plus, Trash2,
   Search
 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -269,9 +270,8 @@ export default function AdminDashboard() {
       <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-zinc-900 px-4">
         <div className="max-w-md w-full bg-white dark:bg-black p-8 rounded-3xl shadow-xl border border-gray-100 dark:border-gray-800">
           <div className="flex justify-center mb-8">
-            <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-2xl">
-              <Wrench className="w-8 h-8 text-blue-600" />
-            </div>
+            <Image src="/logo-mark-light.svg" alt="Garage Nyumbani" width={72} height={72} className="dark:hidden" />
+            <Image src="/logo-mark-dark.svg" alt="Garage Nyumbani" width={72} height={72} className="hidden dark:block" />
           </div>
           <h1 className="font-display text-2xl font-bold text-center mb-8">Admin Access</h1>
           <form onSubmit={handleLogin} className="space-y-6">
@@ -353,9 +353,10 @@ export default function AdminDashboard() {
       {/* Sidebar */}
       <aside className="w-full md:w-64 bg-white dark:bg-black border-r border-gray-200 dark:border-gray-800 flex-shrink-0">
         <div className="p-6">
-          <div className="flex items-center gap-2 font-display font-bold text-xl mb-8">
-            <Wrench className="w-6 h-6 text-blue-600" />
-            Garage Admin
+          <div className="flex items-center gap-3 mb-8">
+            <Image src="/logo-mark-light.svg" alt="Garage Nyumbani" width={40} height={40} className="dark:hidden" />
+            <Image src="/logo-mark-dark.svg" alt="Garage Nyumbani" width={40} height={40} className="hidden dark:block" />
+            <span className="font-display font-bold text-lg">Garage Admin</span>
           </div>
           <nav className="space-y-2">
             {[
