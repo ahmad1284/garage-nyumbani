@@ -1,9 +1,10 @@
 export const BUSINESS_NAME = "GARAGE NYUMBANI";
-export const PHONE_NUMBER = "+255700000000";
-export const WHATSAPP_NUMBER = "255700000000";
+export const PHONE_NUMBER = "+255 764 869 178";
+export const WHATSAPP_NUMBER = "255764869178";
 export const BUSINESS_LOCATION = "MPENDAE, ZANZIBAR";
-export const FACEBOOK_URL = "https://facebook.com/garagenyumbani";
-export const INSTAGRAM_URL = "https://instagram.com/garagenyumbani";
+export const FACEBOOK_URL = "https://www.facebook.com/share/1KaQvAUsYF/?mibextid=wwXIfr";
+export const INSTAGRAM_URL = "https://www.instagram.com/garagenyumbani?igsh=MTdsa285aGc3a2pwYQ==";
+export const TIKTOK_URL = "https://www.tiktok.com/@garage.nyumbani?_r=1&_t=ZS-95da7a9qpCm";
 export const GOOGLE_MAPS_EMBED_URL = "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3986.4!2d39.2083!3d-6.1659!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2sMpendae%2C+Zanzibar!5e0!3m2!1sen!2stz!4v1";
 
 export const MECHANICS: string[] = [
