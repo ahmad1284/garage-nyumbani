@@ -21,7 +21,7 @@ export function ReminderModal({ records, smsEnabled, onClose, onReminderSent }: 
   const isDone = currentIdx >= records.length;
 
   const buildWhatsAppMessage = (record: ServiceRecord) =>
-    `Hello ${record.customerName}, it's time for your next *${record.serviceType}* service for your *${record.carModel}*. Please book an appointment with ${WHATSAPP_NUMBER === '255700000000' ? 'Garage Nyumbani' : 'us'}!`;
+    `Hello ${record.customerName}, it's time for your next *${record.serviceType}* service for your *${record.carModel}*. Please book an appointment with Garage Nyumbani!`;
 
   const handleWhatsApp = () => {
     if (!current) return;
